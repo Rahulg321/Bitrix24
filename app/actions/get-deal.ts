@@ -55,14 +55,26 @@ export const GetAllDeals = async ({
   limit = 20,
   dealTypes,
   ebitda,
+  askingPrice,
+  location,
+  industry,
+  revenue,
 }: {
   search?: string | undefined;
   offset?: number;
   limit?: number;
   dealTypes?: DealType[];
   ebitda?: string;
+  askingPrice?: string;
+  location?: string;
+  industry?: string;
+  revenue?: string;
 }): Promise<GetDealsResult> => {
   const ebitdaValue = ebitda ? parseFloat(ebitda) : undefined;
+  const revenueValue = revenue ? parseFloat(revenue) : undefined; // move these into floats for searching
+  const askingPriceValue = askingPrice ? parseFloat(askingPrice) : undefined;
+  const locationValue = location ? location : undefined;
+  const industryValue = industry ? industry : undefined;
 
   const whereClause = {
     ...(search ? { dealCaption: { contains: search } } : {}),
@@ -70,6 +82,10 @@ export const GetAllDeals = async ({
       ? { dealType: { in: dealTypes } }
       : {}),
     ...(ebitdaValue !== undefined ? { ebitda: { gte: ebitdaValue } } : {}),
+    ...(revenueValue !== undefined ? { revenue : { gte: revenueValue} } : {}), // searches for greater than or equal to
+    ...(askingPriceValue !== undefined ? { askingPrice : { gte: askingPriceValue} } : {}),
+    ...(locationValue !== undefined ? { location: { contains: locationValue} } : {}),
+    ...(industryValue !== undefined ? { industry: { contains: industryValue} } : {}),
   };
 
   console.log("whereClause", whereClause);
