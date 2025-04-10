@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
 import React from "react";
+import { auth } from "../../auth";
 
 /**
  * Adds a new deal to Firebase.
@@ -37,6 +38,23 @@ const DeleteDealFromDB = async (dealType: DealType, dealId: string) => {
         id: dealId,
       },
     });
+
+    const session = await auth();
+    const user = session?.user;
+    
+    if (!user || !user.id) {
+      throw new Error("User not authenticated");
+    }
+    
+    const addedLog = await prismaDB.log.create({
+      data: {
+        action: "Delete Deal",
+        userId: user.id,
+        userName: user.name || "Unknown User",
+        dealId: dealId,
+        message: "Deleted Deal"
+      },
+    })
 
     switch (dealType) {
       case "MANUAL":

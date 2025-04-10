@@ -6,6 +6,7 @@ import prismaDB from "@/lib/prisma";
 import { DealType } from "@prisma/client";
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { revalidatePath } from "next/cache";
+import { auth } from "../../auth";
 
 /**
  * Updates an existing deal in Firebase.
@@ -53,6 +54,24 @@ export default async function EditDealFromFirebase(
         askingPrice: values.asking_price,
       },
     });
+
+    const session = await auth();
+    const user = session?.user;
+    
+    if (!user || !user.id) {
+      throw new Error("User not authenticated");
+    }
+    
+    const addedLog = await prismaDB.log.create({
+      data: {
+        action: "Edit Deal",
+        userId: user.id,
+        userName: user.name || "Unknown User",
+        dealId: dealId,
+        dealTitle: values.title,
+        message: "Edited Deal"
+      },
+    })
 
     revalidatePath(`/raw-deals/${dealId}`);
 
