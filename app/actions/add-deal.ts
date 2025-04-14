@@ -51,23 +51,30 @@ const AddDealToDB = async (values: NewDealFormSchemaType) => {
       },
     });
 
-    const session = await auth();
-    const user = session?.user;
     
-    if (!user || !user.id) {
-      throw new Error("User not authenticated");
-    }
-    
-    const addedLog = await prismaDB.log.create({
-      data: {
-        action: "Add Deal",
-        userId: user.id,
-        userName: user.name || "Unknown User",
-        dealId: addedDeal.id,
-        dealTitle: values.title,
-        message: "Added Deal"
-      },
-    })
+    (async () => {
+      try {
+        const session = await auth();
+        const user = session?.user;
+        
+        if (!user || !user.id) {
+          throw new Error("User not authenticated");
+        }
+
+        await prismaDB.log.create({
+          data: {
+            action: "Add Deal",
+            userId: user.id,
+            userName: user.name || "Unknown User",
+            dealTitle: values.title,
+            dealId: addedDeal.id,
+            message: "Deal added successfully",
+          },
+        });
+      } catch (logError) {
+        console.error("Background logging failed:", logError);
+      }
+    })();
 
     revalidatePath(`/manual-deals`);
 

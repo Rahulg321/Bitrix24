@@ -55,23 +55,30 @@ export default async function EditDealFromFirebase(
       },
     });
 
-    const session = await auth();
-    const user = session?.user;
-    
-    if (!user || !user.id) {
-      throw new Error("User not authenticated");
-    }
-    
-    const addedLog = await prismaDB.log.create({
-      data: {
-        action: "Edit Deal",
-        userId: user.id,
-        userName: user.name || "Unknown User",
-        dealId: dealId,
-        dealTitle: values.title,
-        message: "Edited Deal"
-      },
-    })
+
+    (async () => {
+      try {
+        const session = await auth();
+        const user = session?.user;
+        
+        if (!user || !user.id) {
+          throw new Error("User not authenticated");
+        }
+
+        await prismaDB.log.create({
+          data: {
+            action: "Edit Deal",
+            userId: user.id,
+            userName: user.name || "Unknown User",
+            dealId: dealId,
+            dealTitle: values.title,
+            message: "Edited Deal"
+          },
+        })
+      } catch (logError) {
+        console.error("Background logging failed:", logError);
+      }
+    })();
 
     revalidatePath(`/raw-deals/${dealId}`);
 

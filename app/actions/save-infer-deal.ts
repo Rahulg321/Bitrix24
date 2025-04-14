@@ -51,23 +51,29 @@ export default async function SaveInferredDeal({
       },
     });
 
-    const session = await auth();
-    const user = session?.user;
-    
-    if (!user || !user.id) {
-      throw new Error("User not authenticated");
-    }
-    
-    const addedLog = await prismaDB.log.create({
-      data: {
-        action: "Infer Deal",
-        userId: user.id,
-        userName: user.name || "Unknown User",
-        dealId: docRef.id,
-        dealTitle: parsedDeal.title,
-        message: "Inferred Deal"
-      },
-    })
+    (async () => {
+      try {
+        const session = await auth();
+        const user = session?.user;
+        
+        if (!user || !user.id) {
+          throw new Error("User not authenticated");
+        }
+
+        await prismaDB.log.create({
+          data: {
+            action: "Infer Deal",
+            userId: user.id,
+            userName: user.name || "Unknown User",
+            dealId: docRef.id,
+            dealTitle: parsedDeal.title,
+            message: "Inferred Deal"
+          },
+        })
+      } catch (logError) {
+        console.error("Background logging failed:", logError);
+      }
+    })();
 
     return {
       type: "success",

@@ -39,22 +39,29 @@ const DeleteDealFromDB = async (dealType: DealType, dealId: string) => {
       },
     });
 
-    const session = await auth();
-    const user = session?.user;
-    
-    if (!user || !user.id) {
-      throw new Error("User not authenticated");
-    }
-    
-    const addedLog = await prismaDB.log.create({
-      data: {
-        action: "Delete Deal",
-        userId: user.id,
-        userName: user.name || "Unknown User",
-        dealId: dealId,
-        message: "Deleted Deal"
-      },
-    })
+    (async () => {
+      try {
+        const session = await auth();
+        const user = session?.user;
+        
+        if (!user || !user.id) {
+          throw new Error("User not authenticated");
+        }
+
+        await prismaDB.log.create({
+          data: {
+            action: "Delete Deal",
+            userId: user.id,
+            userName: user.name || "Unknown User",
+            dealId: dealId,
+            dealTitle: "Deleted",
+            message: "Deleted Deal"
+          },
+        });
+      } catch (logError) {
+        console.error("Background logging failed:", logError);
+      }
+    })();
 
     switch (dealType) {
       case "MANUAL":
