@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import CreateNewDealForm from "@/components/forms/new-deal-form";
 import { Metadata } from "next";
 import { BulkImportDialog } from "@/components/Dialogs/bulk-import-dialog";
+import { InferDealDialog } from "@/components/Dialogs/infer-deal-dialog";
 
 export const metadata: Metadata = {
   title: "Add New Deal",
@@ -55,11 +56,7 @@ const NewDealPage = async () => {
                 accordingly
               </p>
               <div className="flex justify-center">
-                <Button className="w-full" asChild>
-                  <Link href="/infer">
-                    <Bot className="mr-2 h-4 w-4" /> Infer Deal
-                  </Link>
-                </Button>
+              <InferDealDialog />
               </div>
             </div>
           </div>

@@ -42,7 +42,7 @@ export const NavLinks: NavLinkType = [
   { navlink: "/new-deal", navlabel: "New", icon: FiPlus },
   { navlink: "/raw-deals", navlabel: "Raw", icon: FiList },
   { navlink: "/published-deals", navlabel: "Published", icon: FiCheckSquare },
-  { navlink: "/infer", navlabel: "Infer", icon: FiSearch },
+  // { navlink: "/infer", navlabel: "Infer", icon: FiSearch },
 ];
 
 const Header = ({ className, session }: HeaderProps) => {
