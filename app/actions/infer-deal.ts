@@ -6,12 +6,7 @@ import { createStreamableValue } from "ai/rsc";
 import { z } from "zod";
 import { InferDealSchemaType } from "../(protected)/infer/InferDealComponent";
 import { InferDealSchema } from "@/components/schemas/infer-deal-schema";
-
-const openai = createOpenAI({
-  // custom settings, e.g.
-  apiKey: process.env.AI_API_KEY,
-  compatibility: "strict", // strict mode, enable when using the OpenAI API
-});
+import { openai } from "@/lib/ai/available-models";
 
 // Infer the TypeScript type from the schema
 

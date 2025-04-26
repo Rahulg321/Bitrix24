@@ -5,8 +5,6 @@ import { db } from "@/lib/firebase/init";
 import prismaDB from "@/lib/prisma";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
-// create a sample zod schema
-
 export default async function SaveInferredDeal({
   generation,
 }: {

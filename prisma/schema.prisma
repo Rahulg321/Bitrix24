@@ -19,16 +19,17 @@ enum UserRole {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String          @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String          @unique
   emailVerified DateTime?
   image         String?
   accounts      Account[]
-  role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  isBlocked     Boolean   @default(false)
+  role          UserRole        @default(USER)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  isBlocked     Boolean         @default(false)
+  UserActionLog UserActionLog[]
 }
 
 model Account {
@@ -133,4 +134,14 @@ enum Sentiment {
   POSITIVE
   NEUTRAL
   NEGATIVE
+}
+
+model UserActionLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -1,5 +1,4 @@
 "use server";
-import "server-only";
 
 // lib/bitrix.js
 import axios from "axios";
