@@ -1,3 +1,4 @@
+// components/DealCard.tsx
 "use client";
 
 import React from "react";
@@ -29,6 +30,9 @@ import { useToast } from "@/hooks/use-toast";
 import DeleteDealFromDB from "@/app/actions/delete-deal";
 import { cn } from "@/lib/utils";
 
+import moveToInProcess from "@/app/actions/move-to-in-process";
+import { exportDealToBitrix } from "@/app/actions/upload-bitrix";
+
 const DealCard = ({
   deal,
   userRole,
@@ -42,19 +46,27 @@ const DealCard = ({
   showActions?: boolean;
   showScreenButton?: boolean;
 }) => {
-  const editLink = `/raw-deals/${deal.id}/edit`;
+  const editLink   = `/raw-deals/${deal.id}/edit`;
   const detailLink = `/raw-deals/${deal.id}`;
   const screenLink = `/raw-deals/${deal.id}/screen`;
-
   const { toast } = useToast();
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+
+  // Wrapper that Next.js expects for <form action={…}>
+  const handleMove = async (_formData: FormData): Promise<void> => {
+    await moveToInProcess(deal.id);
+  };
+
+  const handleExport = async (_formData: FormData): Promise<void> => {
+    await exportDealToBitrix(deal);
+  };
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       notation: "compact",
       maximumFractionDigits: 1,
     }).format(amount);
-  };
 
   const handleDelete = async () => {
     try {
@@ -64,7 +76,7 @@ const DealCard = ({
         description: response.message,
         variant: response.type === "success" ? "default" : "destructive",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete deal",
@@ -77,7 +89,7 @@ const DealCard = ({
     <Card
       className={cn(
         "group w-full transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
-        className,
+        className
       )}
     >
       <CardHeader className="pb-3">
@@ -87,6 +99,7 @@ const DealCard = ({
           </CardTitle>
           {showActions && (
             <div className="flex space-x-2">
+              {/* Edit */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -106,6 +119,7 @@ const DealCard = ({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              {/* Delete */}
               {userRole === "ADMIN" && (
                 <TooltipProvider>
                   <Tooltip>
@@ -129,6 +143,7 @@ const DealCard = ({
           )}
         </div>
       </CardHeader>
+
       <CardContent className="grid gap-3">
         <InfoItem
           icon={<DollarSign className="h-4 w-4 text-emerald-500" />}
@@ -150,7 +165,7 @@ const DealCard = ({
           label="Industry"
           value={deal.industry}
         />
-        {deal.askingPrice && (
+        {deal.askingPrice != null && (
           <InfoItem
             icon={<DollarSign className="h-4 w-4 text-amber-500" />}
             label="Asking Price"
@@ -165,19 +180,50 @@ const DealCard = ({
           />
         )}
       </CardContent>
+
       <CardFooter className="flex flex-col gap-2 pt-3">
+        {/* View Details */}
         <Button className="w-full bg-primary/90 hover:bg-primary" asChild>
           <Link href={detailLink}>View Details</Link>
         </Button>
 
         {showScreenButton && (
-          <Button
-            className="w-full border-primary/20 hover:bg-primary/10 hover:text-primary"
-            asChild
-            variant="outline"
-          >
-            <Link href={screenLink}>Screen Deal</Link>
-          </Button>
+          <>
+            {/* Screen Deal */}
+            <Button
+              className="w-full border-primary/20 hover:bg-primary/10 hover:text-primary"
+              asChild
+              variant="outline"
+            >
+              <Link href={screenLink}>Screen Deal</Link>
+            </Button>
+
+            {/* RAW → Move to In Process */}
+            {deal.status === "RAW" && (
+              <form action={handleMove} className="w-full">
+                <Button
+                  type="submit"
+                  className="w-full border-yellow-500 hover:bg-yellow-100 hover:text-yellow-800"
+                  variant="outline"
+                >
+                  Move to In Process
+                </Button>
+              </form>
+            )}
+
+            {/* IN_PROCESS → Publish to Bitrix */}
+            {deal.status === "IN_PROCESS" && (
+              <form action={handleExport} className="w-full">
+                <Button
+                  type="submit"
+                  className="w-full border-green-500 hover:bg-green-100 hover:text-green-800"
+                  variant="outline"
+                >
+                  Publish to Bitrix
+                </Button>
+              </form>
+            )}
+          </>
         )}
       </CardFooter>
     </Card>

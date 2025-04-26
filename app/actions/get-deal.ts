@@ -2,7 +2,7 @@
 import "server-only";
 
 import prismaDB from "@/lib/prisma";
-import { Deal, DealType } from "@prisma/client";
+import { Deal, DealType, DealStatus } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 
 interface GetDealsResult {
@@ -55,21 +55,24 @@ export const GetAllDeals = async ({
   limit = 20,
   dealTypes,
   ebitda,
+  status,
 }: {
   search?: string | undefined;
   offset?: number;
   limit?: number;
   dealTypes?: DealType[];
   ebitda?: string;
+  status?: DealStatus;
 }): Promise<GetDealsResult> => {
   const ebitdaValue = ebitda ? parseFloat(ebitda) : undefined;
 
-  const whereClause = {
+  const whereClause: any = {
     ...(search ? { dealCaption: { contains: search } } : {}),
     ...(dealTypes && dealTypes.length > 0
       ? { dealType: { in: dealTypes } }
       : {}),
     ...(ebitdaValue !== undefined ? { ebitda: { gte: ebitdaValue } } : {}),
+    ...(status ? { status } : {}), 
   };
 
   console.log("whereClause", whereClause);

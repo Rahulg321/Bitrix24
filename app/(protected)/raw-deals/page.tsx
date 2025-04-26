@@ -12,6 +12,7 @@ import DealTypeFilter from "@/components/DealTypeFilter";
 import { DealType } from "@prisma/client";
 import SearchDealsSkeleton from "@/components/skeletons/SearchDealsSkeleton";
 import SearchEbitdaDeals from "@/components/SearchEbitdaDeals";
+import { DealStatus } from "@prisma/client"; 
 
 export const metadata: Metadata = {
   title: "Inferred Deals",
@@ -45,6 +46,7 @@ const RawDealsPage = async (props: { searchParams: SearchParams }) => {
     limit,
     dealTypes: dealTypes as DealType[],
     ebitda,
+    status: DealStatus.RAW,
   });
 
   const currentUserRole = await getCurrentUserRole();
