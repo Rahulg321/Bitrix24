@@ -72,7 +72,7 @@ export const InferNewDealComponent = () => {
           Note:- Double check the output given by AI and save it accordingly
         </span>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8 lg:gap-12">
+      <div className="space-y-8">
         <div>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -102,19 +102,21 @@ export const InferNewDealComponent = () => {
             </form>
           </Form>
         </div>
-        <div>
+
+        <div className="space-y-4">
           <h2>Inferred Deal using ChatGPT</h2>
-          <div className="text-wrap">
+          <div className="text-wrap rounded-md border p-4 min-h-32">
             <pre
               style={{
                 whiteSpace: "pre-wrap",
                 wordWrap: "break-word",
                 overflowX: "hidden",
-                fontSize: "0.875rem", // Reduces the font size (14px)
+                fontSize: "0.875rem",
                 lineHeight: "1.2",
+                minHeight: "8rem",
               }}
             >
-              {generation}
+              {generation || "No deal generated yet."}
             </pre>
           </div>
           <div className="mt-4 flex items-center justify-between md:mt-6">
@@ -160,8 +162,6 @@ export const InferNewDealComponent = () => {
               <Save className="mr-2 size-4" />{" "}
               {saveDealPending ? "Saving..." : "Save Deal"}
             </Button>
-
-            {/* <EditInferDealDialog /> */}
           </div>
         </div>
       </div>
