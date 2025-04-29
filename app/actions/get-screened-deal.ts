@@ -77,10 +77,11 @@ export const GetAllDeals = async ({
   const industryValue = industry ? industry : undefined;
 
   const whereClause = {
+    ...{bitrixId: { not: null } } ,
     ...(search ? { dealCaption: { contains: search } } : {}),
     ...(dealTypes && dealTypes.length > 0
-      ? { dealType: { in: dealTypes } }
-      : {}),
+    ? { dealType: { in: dealTypes } }
+    : {}),
     ...(ebitdaValue !== undefined ? { ebitda: { gte: ebitdaValue } } : {}),
     ...(revenueValue !== undefined ? { revenue : { gte: revenueValue} } : {}), // searches for greater than or equal to
     ...(askingPriceValue !== undefined ? { askingPrice : { gte: askingPriceValue} } : {}),

@@ -12,6 +12,10 @@ import DealTypeFilter from "@/components/DealTypeFilter";
 import { DealType } from "@prisma/client";
 import SearchDealsSkeleton from "@/components/skeletons/SearchDealsSkeleton";
 import SearchEbitdaDeals from "@/components/SearchEbitdaDeals";
+import SearchRevenueDeals from "@/components/SearchRevenueDeals";
+import SearchIndustryDeals from "@/components/SearchIndustryDeals";
+import SearchAskingPriceDeals from "@/components/SearchAskingPriceDeals";
+import SearchLocationDeals from "@/components/SearchLocationDeals";
 
 export const metadata: Metadata = {
   title: "Inferred Deals",
@@ -29,6 +33,10 @@ const RawDealsPage = async (props: { searchParams: SearchParams }) => {
   const offset = (currentPage - 1) * limit;
 
   const ebitda = searchParams?.ebitda || "";
+  const revenue = searchParams?.revenue || "";
+  const industry = searchParams?.industry || "";
+  const askingPrice = searchParams?.askingPrice || "";
+  const location = searchParams?.location || "";
 
   // Ensure dealTypes is always an array
   const dealTypes =
@@ -38,6 +46,9 @@ const RawDealsPage = async (props: { searchParams: SearchParams }) => {
 
   console.log("dealTypes", dealTypes);
   console.log("ebitda", ebitda);
+  console.log("askingPrice", askingPrice);
+  console.log("location", location);
+  console.log("industry", industry);
 
   const { data, totalPages, totalCount } = await GetAllDeals({
     search,
@@ -45,6 +56,10 @@ const RawDealsPage = async (props: { searchParams: SearchParams }) => {
     limit,
     dealTypes: dealTypes as DealType[],
     ebitda,
+    revenue,
+    industry,
+    askingPrice,
+    location,
   });
 
   const currentUserRole = await getCurrentUserRole();
@@ -76,6 +91,18 @@ const RawDealsPage = async (props: { searchParams: SearchParams }) => {
           </Suspense>
           <Suspense fallback={<SearchDealsSkeleton />}>
             <SearchEbitdaDeals />
+          </Suspense>
+          <Suspense fallback={<SearchDealsSkeleton />}>
+            <SearchIndustryDeals />
+          </Suspense>
+          <Suspense fallback={<SearchDealsSkeleton />}>
+            <SearchAskingPriceDeals />
+          </Suspense>
+          <Suspense fallback={<SearchDealsSkeleton />}>
+            <SearchRevenueDeals />
+          </Suspense>
+          <Suspense fallback={<SearchDealsSkeleton />}>
+            <SearchLocationDeals />
           </Suspense>
         </div>
         <DealTypeFilter />
