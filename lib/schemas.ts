@@ -9,7 +9,15 @@ export const cimFormSchema = z.object({
   }),
 });
 
+export const pocFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  workPhone: z.string().optional(),
+  email: z.string().email("Email must be valid")
+});
+
 export type CimFormValues = z.infer<typeof cimFormSchema>;
+
+export type PocFormValues = z.infer<typeof pocFormSchema>;
 
 export const screenDealSchema = z.object({
   title: z.string(),

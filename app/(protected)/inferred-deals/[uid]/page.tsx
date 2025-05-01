@@ -45,6 +45,9 @@ import AIReasoning from "@/components/AiReasoning";
 import SimUploadDialog from "@/components/Dialogs/sim-upload-dialog";
 import SimItemSkeleton from "@/components/skeletons/SimItemSkeleton";
 import FetchDealSim from "@/components/FetchDealSim";
+import PocUploadDialog from "@/components/Dialogs/poc-upload-dialog";
+import PocItemSkeleton from "@/components/skeletons/PocItemSkeleton";
+import FetchDealPoc from "@/components/FetchDealPoc";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import AIReasoningSkeleton from "@/components/skeletons/AIReasoningSkeleton";
 import FetchDealAIScreenings from "@/components/FetchDealAIScreenings";
@@ -259,6 +262,26 @@ const InferredDealSpecificPage = async (props: { params: Params }) => {
               </ScrollArea>
             </Suspense>
           </CardContent>
+        </Card>
+        <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>PoCs (Points of Contact)</CardTitle>
+        <PocUploadDialog dealId={uid} dealType={dealType} />
+        </CardHeader>
+        <CardContent>
+        <Suspense
+        fallback={
+          <div className="flex flex-col gap-4">
+          <PocItemSkeleton />
+          <PocItemSkeleton />
+          </div>
+        }
+        >
+        <ScrollArea className="h- [300px] pr-4">
+        <FetchDealPoc dealId={uid} dealType={dealType} />
+        </ScrollArea>
+        </Suspense>
+        </CardContent>
         </Card>
       </div>
     </section>

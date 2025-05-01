@@ -4,6 +4,7 @@ import {
   DealType,
   SIMStatus,
   Sentiment,
+  POC,
 } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -69,6 +70,17 @@ async function main() {
       dealType: DealType.AI_INFERRED,
       sourceWebsite: "www.xyzbusiness.com",
       companyLocation: "Austin, TX",
+    },
+  });
+
+  // Create PoC entries
+  await prisma.pOC.create({
+    data: {
+      name: "Test",
+      workPhone: "(574) 256-8810",
+      email: "putmanaugustine@gmail.com",
+      websites: [],
+      dealId: deal1.id,
     },
   });
 

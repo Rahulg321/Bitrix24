@@ -27,8 +27,11 @@ import PreviousPageButton from "@/components/PreviousPageButton";
 import { DealDetailItem } from "@/components/DealDetailItem";
 import prismaDB from "@/lib/prisma";
 import SimUploadDialog from "@/components/Dialogs/sim-upload-dialog";
+import PocUploadDialog from "@/components/Dialogs/poc-upload-dialog";
 import FetchDealSim from "@/components/FetchDealSim";
+import FetchDealPoc from "@/components/FetchDealPoc";
 import SimItemSkeleton from "@/components/skeletons/SimItemSkeleton";
+import PocItemSkeleton from "@/components/skeletons/PocItemSkeleton";
 import FetchDealAIScreenings from "@/components/FetchDealAIScreenings";
 import AIReasoningSkeleton from "@/components/skeletons/AIReasoningSkeleton";
 import {
@@ -299,6 +302,26 @@ export default async function ManualDealSpecificPage(props: {
             >
               <ScrollArea className="h-[300px] pr-4">
                 <FetchDealSim dealId={uid} dealType={dealType} />
+              </ScrollArea>
+            </Suspense>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>PoCs (Points of Contact)</CardTitle>
+          <PocUploadDialog dealId={uid} dealType={dealType} />
+          </CardHeader>
+          <CardContent>
+            <Suspense
+              fallback={
+                <div className="flex flex-col gap-4">
+                <PocItemSkeleton />
+                <PocItemSkeleton />
+                </div>
+              }
+              >
+              <ScrollArea className="h- [300px] pr-4">
+                <FetchDealPoc dealId={uid} dealType={dealType} />
               </ScrollArea>
             </Suspense>
           </CardContent>

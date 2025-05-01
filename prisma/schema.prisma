@@ -79,6 +79,8 @@ model Deal {
 
   bitrixId        String?
   bitrixCreatedAt DateTime?
+
+  POC             POC[]
 }
 
 model SIM {
@@ -93,6 +95,16 @@ model SIM {
   deal      Deal      @relation(fields: [dealId], references: [id])
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model POC {
+  id        String   @id @default(cuid())
+  name      String
+  workPhone String?
+  email     String
+  websites  String[]
+  Deal      Deal?    @relation(fields: [dealId], references: [id])
+  dealId    String?
 }
 
 model Questionnaire {

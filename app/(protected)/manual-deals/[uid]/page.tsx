@@ -31,6 +31,7 @@ import SimItem from "@/components/SimItem";
 import prismaDB from "@/lib/prisma";
 import SimUploadDialog from "@/components/Dialogs/sim-upload-dialog";
 import FetchDealSim from "@/components/FetchDealSim";
+import FetchDealPoc from "@/components/FetchDealPoc";
 import SimItemSkeleton from "@/components/skeletons/SimItemSkeleton";
 import FetchDealAIScreenings from "@/components/FetchDealAIScreenings";
 import AIReasoningSkeleton from "@/components/skeletons/AIReasoningSkeleton";
@@ -246,6 +247,26 @@ export default async function ManualDealSpecificPage(props: {
               </ScrollArea>
             </Suspense>
           </CardContent>
+        </Card>
+        <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>PoCs (Points of Contact)</CardTitle>
+        <PocUploadDialog dealId={uid} dealType={dealType} />
+        </CardHeader>
+        <CardContent>
+        <Suspense
+        fallback={
+          <div className="flex flex-col gap-4">
+          <PocItemSkeleton />
+          <PocItemSkeleton />
+          </div>
+        }
+        >
+        <ScrollArea className="h- [300px] pr-4">
+        <FetchDealPoc dealId={uid} dealType={dealType} />
+        </ScrollArea>
+        </Suspense>
+        </CardContent>
         </Card>
       </div>
     </section>

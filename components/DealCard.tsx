@@ -34,7 +34,7 @@ const DealCard = ({
   userRole,
   className,
   showActions = true,
-  showScreenButton = true,
+  showScreenButton = true
 }: {
   deal: Deal;
   userRole: UserRole;
