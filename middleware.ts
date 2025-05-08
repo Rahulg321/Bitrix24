@@ -1,59 +1,110 @@
-import { NextResponse } from "next/server";
+// middleware.ts
+import { NextResponse, type NextRequest } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import { getToken } from "next-auth/jwt";
 import {
   AUTH_ROUTES,
   DEFAULT_LOGIN_REDIRECT,
   PROTECTED_BASE_ROUTES,
   PROTECTED_ROUTES,
 } from "./routes";
-import authConfig from "./auth.config";
-import NextAuth from "next-auth";
 
-// 2. Wrapped middleware option
-const { auth } = NextAuth(authConfig);
+// ─── Upstash Redis REST client (Edge) ───────────────────────────────
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
 
-export default auth((req) => {
-  // Your custom middleware logic goes here
-  const currentPathname = req.nextUrl.pathname;
-  //   !! converts the value into its boolean equivalent
-  const isLoggedIn = !!req.auth;
+// ─── Define one Ratelimit instance per “task” ────────────────────────
+const pageLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(100, "60 s"),    // 100 page‐views/min
+});
 
-  const isProtectedBaseRoute = PROTECTED_BASE_ROUTES.some((el) =>
-    currentPathname.startsWith(el),
-  );
+const apiLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, "60 s"),     // 60 general API calls/min
+});
 
-  if (isProtectedBaseRoute && !isLoggedIn) {
-    console.log(
-      "Access denied for not logged-in users trying to access a protected base route",
-    );
+const chatLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(20, "60 s"),     // 20 chat messages/min
+});
+
+const researchLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, "60 s"),     // 10 research calls/min
+});
+
+const uploadLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "60 s"),      // 5 uploads/min
+});
+
+export async function middleware(req: NextRequest) {
+  // — Identify the client (by IP) —
+  const forwarded = req.headers.get("x-forwarded-for") ?? "";
+  const ip = forwarded.split(",")[0] || "unknown";
+  const path = req.nextUrl.pathname;
+
+  // — Pick the right limiter based on path —
+  let limiter = pageLimiter;
+  if (path.startsWith("/api/chat")) {
+    limiter = chatLimiter;
+  } else if (path.startsWith("/api/research")) {
+    limiter = researchLimiter;
+  } else if (
+    path.startsWith("/api/upload") ||
+    path.startsWith("/api/bulk-upload")
+  ) {
+    limiter = uploadLimiter;
+  } else if (path.startsWith("/api/")) {
+    limiter = apiLimiter;
+  }
+
+  // — Apply rate limit —
+  const { success, limit, remaining } = await limiter.limit(ip);
+  if (!success) {
+    return new NextResponse("Too Many Requests", {
+      status: 429,
+      headers: {
+        "Retry-After": process.env.RATE_LIMIT_WINDOW || "60",
+        "X-RateLimit-Limit": String(limit),
+        "X-RateLimit-Remaining": String(remaining),
+      },
+    });
+  }
+
+  // — Push headers on every successful pass —
+  const response = NextResponse.next();
+  response.headers.set("X-RateLimit-Limit", String(limit));
+  response.headers.set("X-RateLimit-Remaining", String(remaining));
+
+  // — Authentication / Protected‐route logic (unchanged) —
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const isLoggedIn = !!token;
+
+  if (
+    PROTECTED_BASE_ROUTES.some((r) => path.startsWith(r)) &&
+    !isLoggedIn
+  ) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  if (AUTH_ROUTES.includes(currentPathname)) {
-    // we are accessing an auth route
-    if (isLoggedIn) {
-      console.log(
-        "access denied for accessing auth routes for logged in users",
-      );
-      // we are already logged in so we cant access the auth routes anymore
-      return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, req.url));
-    }
+  if (AUTH_ROUTES.includes(path) && isLoggedIn) {
+    return NextResponse.redirect(
+      new URL(DEFAULT_LOGIN_REDIRECT, req.url)
+    );
   }
 
-  if (PROTECTED_ROUTES.includes(currentPathname)) {
-    // we are accessing a protected routes
-    // check for valid sessions
-    // redirect unauthorized users
-
-    if (!isLoggedIn) {
-      console.log("access denied for not logged in users");
-      return NextResponse.redirect(new URL("/auth/login", req.url));
-    }
+  if (PROTECTED_ROUTES.includes(path) && !isLoggedIn) {
+    return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  return NextResponse.next();
-});
+  return response;
+}
 
-// run for all routes
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
 };
