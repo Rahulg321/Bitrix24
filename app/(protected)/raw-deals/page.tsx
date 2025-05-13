@@ -1,50 +1,54 @@
+// app/(protected)/raw-deals/page.tsx
 import React, { Suspense } from "react";
-import DealCardSkeleton from "@/components/skeletons/DealCardSkeleton";
 import { Metadata } from "next";
-import prismaDB from "@/lib/prisma";
+import DealCardSkeleton from "@/components/skeletons/DealCardSkeleton";
 import DealCard from "@/components/DealCard";
-import getCurrentUserRole from "@/lib/data/current-user-role";
-import GetDeals, { GetAllDeals } from "@/app/actions/get-deal";
 import SearchDeals from "@/components/SearchDeal";
-import Pagination from "@/components/pagination";
-import { setTimeout } from "timers/promises";
-import DealTypeFilter from "@/components/DealTypeFilter";
-import { DealType } from "@prisma/client";
 import SearchDealsSkeleton from "@/components/skeletons/SearchDealsSkeleton";
 import SearchEbitdaDeals from "@/components/SearchEbitdaDeals";
-import DealTypeFilterSkeleton from "@/components/skeletons/DealTypeFilterSkeleton";
-import UserDealFilter from "@/components/UserDealFilter";
+import DealTypeFilter from "@/components/DealTypeFilter";
+import Pagination from "@/components/pagination";
+import getCurrentUserRole from "@/lib/data/current-user-role";
+import { DealType } from "@prisma/client";
+import { GetAllDeals } from "@/app/actions/get-deal";
+import DealContainer from "@/components/DealContainer";
 
 export const metadata: Metadata = {
-  title: "Raw Deals",
-  description: "View the raw deals",
+  title: "Inferred Deals",
+  description: "View the inferred deals scraped using AI",
 };
 
-// After
-type SearchParams = Promise<{ [key: string]: string | undefined }>;
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-const RawDealsPage = async (props: { searchParams: SearchParams }) => {
-  const searchParams = await props.searchParams;
-  const search = searchParams?.query || "";
-  const currentPage = Number(searchParams?.page) || 1;
-  const limit = Number(searchParams?.limit) || 20;
+export default async function RawDealsPage(props: {
+  searchParams: SearchParams;
+}) {
+  const params = await props.searchParams;
+
+  const search = Array.isArray(params.query)
+    ? params.query[0]
+    : params.query ?? "";
+  const currentPage =
+    Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1;
+  const limit =
+    Number(Array.isArray(params.limit) ? params.limit[0] : params.limit) || 20;
   const offset = (currentPage - 1) * limit;
+  const ebitda =
+    Array.isArray(params.ebitda) ? params.ebitda[0] : params.ebitda ?? "";
 
-  const ebitda = searchParams?.ebitda || "";
-  const userId = searchParams?.userId || "";
-  // Ensure dealTypes is always an array
-  const dealTypes =
-    typeof searchParams?.dealType === "string"
-      ? [searchParams.dealType]
-      : searchParams?.dealType || [];
+  const rawDealTypes = Array.isArray(params.dealType)
+    ? params.dealType
+    : params.dealType
+    ? [params.dealType]
+    : [];
+  const dealTypes = rawDealTypes as DealType[];
 
   const { data, totalPages, totalCount } = await GetAllDeals({
     search,
     offset,
     limit,
-    dealTypes: dealTypes as DealType[],
+    dealTypes,
     ebitda,
-    userId,
   });
 
   const currentUserRole = await getCurrentUserRole();
@@ -52,20 +56,19 @@ const RawDealsPage = async (props: { searchParams: SearchParams }) => {
   return (
     <section className="block-space group container">
       <div className="mb-8 text-center">
-        <h1 className="mb-4 text-4xl font-bold md:mb-6 lg:mb-8">Raw Deals</h1>
+        <h1 className="mb-4 text-4xl font-bold">Raw Deals</h1>
         <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-          Browse through our collection of unprocessed deals gathered from
-          various sources including manual entries, bulk uploads, external
-          website scraping, and AI-inferred opportunities.
+          Browse our unprocessed deals from manual entries, bulk uploads,
+          web-scraping and AI-driven inferences.
         </p>
       </div>
 
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2">
-          <h4 className="text-lg font-medium">
-            Total Deals: <span className="font-bold">{totalCount}</span>
+        <div className="flex items-center gap-4">
+          <h4 className="text-lg">
+            Total Deals: <strong>{totalCount}</strong>
           </h4>
-          <div className="ml-4 rounded-md bg-primary/10 px-3 py-1 text-sm">
+          <div className="rounded-md bg-primary/10 px-3 py-1 text-sm">
             Page {currentPage} of {totalPages}
           </div>
         </div>
@@ -77,33 +80,28 @@ const RawDealsPage = async (props: { searchParams: SearchParams }) => {
           <Suspense fallback={<SearchDealsSkeleton />}>
             <SearchEbitdaDeals />
           </Suspense>
-        </div>
-        <Suspense fallback={<DealTypeFilterSkeleton />}>
           <DealTypeFilter />
-        </Suspense>
-        <Suspense fallback={<DealTypeFilterSkeleton />}>
-          <UserDealFilter />
-        </Suspense>
+        </div>
       </div>
 
-      <div className="group-has-[[data-pending]]:animate-pulse">
-        {data.length === 0 ? (
-          <div className="mt-12 text-center">
-            <p className="text-xl text-muted-foreground">
-              No deals found matching your criteria.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {data.map((e) => (
-              <DealCard key={e.id} deal={e} userRole={currentUserRole!} />
-            ))}
-          </div>
-        )}
-      </div>
+      {data.length === 0 ? (
+        <div className="mt-12 text-center">
+          <p className="text-xl text-muted-foreground">
+            No deals found matching your criteria.
+          </p>
+        </div>
+      ) : (
+        <DealContainer
+          data={data}
+          userRole={currentUserRole!}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={totalCount}
+        />
+      )}
+
       <Pagination totalPages={totalPages} />
     </section>
   );
-};
+}
 
-export default RawDealsPage;
