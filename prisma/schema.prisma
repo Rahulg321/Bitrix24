@@ -31,6 +31,8 @@ model User {
   isBlocked     Boolean         @default(false)
   UserActionLog UserActionLog[]
   Deal          Deal[]
+  comments      Comment[]
+  notifications Notification[]
 }
 
 model Account {
@@ -77,6 +79,8 @@ model Deal {
   updatedAt       DateTime      @default(now()) @updatedAt
   SIM             SIM[]
   AiScreening     AiScreening[]
+  comments        Comment[]
+  status          String        @default("OPEN")
 
   bitrixId        String?
   bitrixCreatedAt DateTime?
@@ -107,6 +111,28 @@ model SIM {
   deal      Deal      @relation(fields: [dealId], references: [id])
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  recipientId String
+  recipient   User     @relation(fields: [recipientId], references: [id])
+  title       String
+  body        String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  createdAt DateTime @default(now())
+
+  deal   Deal?   @relation(fields: [dealId], references: [id])
+  dealId String?
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
 }
 
 model Questionnaire {
