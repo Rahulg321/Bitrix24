@@ -11,6 +11,7 @@ const adminEmails = [
   "daigbe@darkalphacapital.com",
   "daigbe@gmail.com",
   "ayan@darkalphacapital.com",
+  "kshah77@asu.edu"
 ];
 
 declare module "next-auth" {
@@ -24,92 +25,58 @@ declare module "next-auth" {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prismaDB),
-  session: { strategy: "jwt" },
+
+
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, 
+    updateAge: 0,             
+  },
+
   pages: {
     signIn: "/auth/login",
-    error: "/auth/error",
+    error:  "/auth/error",
   },
+
   events: {
-    //this event is only triggered when we use an OAuth provider
     async linkAccount({ user }) {
       await prismaDB.user.update({
-        where: {
-          id: user.id,
-        },
-        data: {
-          emailVerified: new Date(),
-        },
+        where: { id: user.id },
+        data: { emailVerified: new Date() },
       });
     },
   },
 
   callbacks: {
     async session({ session, token }) {
-      if (token.sub && session.user) {
-        session.user.id = token.sub;
-      }
-
-      if (token.role && session.user) {
-        session.user.role = token.role as UserRole;
-      }
-
-      if (token.image && session.user) {
+      if (session.user) {
+        session.user.id    = token.sub!;
+        session.user.role  = token.role  as UserRole;
         session.user.image = token.image as string;
       }
-
       return session;
     },
-    async signIn({ user, account }) {
-      const userEmail = user.email;
-      const currentUser = await getCurrentUserByEmail(userEmail!);
 
-      if (currentUser?.isBlocked) {
-        return false;
-      }
-
+    async signIn({ user }) {
+      const currentUser = await getCurrentUserByEmail(user.email!);
+      if (currentUser?.isBlocked) return false;
       return true;
     },
-    async jwt({ token, user, account }) {
-      if (!token.sub) return token;
 
-      // If there's a user object, it means the user signed in
-      // Update user role on every sign in
-      if (user) {
-        const userRole = determineRole(user.email!);
-        token.role = userRole;
-        await prismaDB.user.update({
-          where: {
-            id: user.id,
-          },
-          data: {
-            role: userRole,
-          },
+    async jwt({ token }) {
+      if (token.sub) {
+        const dbUser = await prismaDB.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true, image: true },
         });
+        if (dbUser) {
+          token.role  = dbUser.role;
+          token.image = dbUser.image;
+        }
       }
-
-      const existingUser = await prismaDB.user.findUnique({
-        where: {
-          id: token.sub,
-        },
-      });
-
-      if (!existingUser) return token;
-
-      token.image = existingUser.image;
-      token.id = existingUser.id;
-
       return token;
     },
   },
+
   ...authConfig,
 });
-
-// Example implementation of determineRole function
-function determineRole(userEmail: string) {
-  // Access user properties like email, name, etc.
-  if (adminEmails.includes(userEmail)) {
-    return UserRole.ADMIN;
-  } else {
-    return UserRole.USER;
-  }
-}

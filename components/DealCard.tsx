@@ -29,42 +29,45 @@ import { useToast } from "@/hooks/use-toast";
 import DeleteDealFromDB from "@/app/actions/delete-deal";
 import { cn } from "@/lib/utils";
 
-const DealCard = ({
-  deal,
-  userRole,
-  className,
-  showActions = true,
-  showScreenButton = true,
-}: {
+interface DealCardProps {
   deal: Deal;
   userRole: UserRole;
   className?: string;
   showActions?: boolean;
   showScreenButton?: boolean;
-}) => {
+}
+
+export default function DealCard({
+  deal,
+  userRole,
+  className,
+  showActions = true,
+  showScreenButton = true,
+}: DealCardProps) {
   const editLink = `/raw-deals/${deal.id}/edit`;
   const detailLink = `/raw-deals/${deal.id}`;
   const screenLink = `/raw-deals/${deal.id}/screen`;
-
   const { toast } = useToast();
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       notation: "compact",
       maximumFractionDigits: 1,
     }).format(amount);
-  };
 
   const handleDelete = async () => {
     try {
       const response = await DeleteDealFromDB(deal.dealType, deal.id);
       toast({
-        title: response.type === "success" ? "Deal Deleted" : "Error",
+        title:
+          response.type === "success" ? "Deal Deleted" : "Error",
         description: response.message,
-        variant: response.type === "success" ? "default" : "destructive",
+        variant:
+          response.type === "success" ? "default" : "destructive",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete deal",
@@ -85,8 +88,10 @@ const DealCard = ({
           <CardTitle className="line-clamp-2 text-lg font-bold text-gray-800 group-hover:text-primary dark:text-gray-200">
             {deal.dealCaption}
           </CardTitle>
+
           {showActions && (
             <div className="flex space-x-2">
+              {/* Edit always available */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -106,6 +111,8 @@ const DealCard = ({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              {/* Delete only for admins */}
               {userRole === "ADMIN" && (
                 <TooltipProvider>
                   <Tooltip>
@@ -129,6 +136,7 @@ const DealCard = ({
           )}
         </div>
       </CardHeader>
+
       <CardContent className="grid gap-3">
         <InfoItem
           icon={<DollarSign className="h-4 w-4 text-emerald-500" />}
@@ -165,6 +173,7 @@ const DealCard = ({
           />
         )}
       </CardContent>
+
       <CardFooter className="flex flex-col gap-2 pt-3">
         <Button className="w-full bg-primary/90 hover:bg-primary" asChild>
           <Link href={detailLink}>View Details</Link>
@@ -182,7 +191,7 @@ const DealCard = ({
       </CardFooter>
     </Card>
   );
-};
+}
 
 const InfoItem = ({
   icon,
@@ -203,5 +212,3 @@ const InfoItem = ({
     </span>
   </div>
 );
-
-export default DealCard;

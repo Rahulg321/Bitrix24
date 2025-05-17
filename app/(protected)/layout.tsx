@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "../globals.css";
@@ -18,31 +19,29 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
-  const userSession = await auth();
+}) {
+  // 1️⃣ Fetch the session on the server
+  const session = await auth();
 
   return (
     <html lang="en" className={cn(GeistSans.variable)} suppressHydrationWarning>
-      <body className={`antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SessionProvider>
+      <body className="antialiased">
+        {/* 2️⃣ Wrap in SessionProvider and pass the session */}
+        <SessionProvider session={session}>
+          {/* 3️⃣ ThemeProvider is now a client component that handles its own props */}
+          <ThemeProvider>
             <main>
               <MenuDialog />
-              <Header session={userSession} />
-
+              {/* 4️⃣ Header can also consume useSession() client-side */}
+              <Header session={session} />
               {children}
               <Footer />
             </main>
-          </SessionProvider>
+          </ThemeProvider>
           <Toaster />
-        </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );
