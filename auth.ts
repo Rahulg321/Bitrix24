@@ -65,14 +65,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async signIn({ user, account }) {
       const userEmail = user.email;
-      console.log(userEmail);
       const currentUser = await getCurrentUserByEmail(userEmail!);
 
       if (currentUser?.isBlocked) {
         return false;
       }
-
-      console.log("email domain:", userEmail.split('@').pop());
 
       if (!allowedDomains.includes(userEmail.split('@').pop())) {
         if (!adminEmails.includes(userEmail)) {
