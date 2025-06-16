@@ -27,6 +27,11 @@ import React from "react";
 const AddDealToDB = withAuthServerAction(
   async (user: User, values: NewDealFormSchemaType) => {
     try {
+      if (values.revenue > 0 && values.ebitda > 0) {
+        const ebitda_margin = values.ebitda / values.revenue;
+      } else {
+        const ebitda_margin = -1;
+      }
       const addedDeal = await prismaDB.deal.create({
         data: {
           title: values.title,
@@ -38,7 +43,7 @@ const AddDealToDB = withAuthServerAction(
           workPhone: values.work_phone,
           revenue: values.revenue,
           ebitda: values.ebitda,
-          ebitdaMargin: values.ebitda_margin,
+          ebitdaMargin: ebitda_margin,
           grossRevenue: values.gross_revenue,
           companyLocation: values.company_location,
           brokerage: values.brokerage,
