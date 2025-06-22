@@ -13,6 +13,10 @@ const adminEmails = [
   "ayan@darkalphacapital.com",
 ];
 
+const allowedDomains = [
+  "darkalphacapital.com",
+];
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -65,6 +69,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (currentUser?.isBlocked) {
         return false;
+      }
+
+      if (!allowedDomains.includes(userEmail.split('@').pop())) {
+        if (!adminEmails.includes(userEmail)) {
+          return false;
+        }
       }
 
       return true;
