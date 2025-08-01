@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "Status" AS ENUM ('OPEN', 'UNKNOWN', 'SOLD', 'INACTIVE', 'OFF_MARKET', 'NOT_AVAILABLE', 'SALE_PENDING', 'UNDER_LOI');
+
+-- AlterTable
+ALTER TABLE "Deal" ADD COLUMN     "status" "Status" NOT NULL DEFAULT 'UNKNOWN';

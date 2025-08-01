@@ -72,6 +72,8 @@ model Deal {
   updatedAt       DateTime      @default(now()) @updatedAt
   SIM             SIM[]
   AiScreening     AiScreening[]
+  status          Status        @default(UNKNOWN)
+  dealLink        String        @default("Unknown")
 
   bitrixId        String?
   bitrixCreatedAt DateTime?
@@ -149,11 +151,23 @@ enum DealType {
   SCRAPED
   MANUAL
   AI_INFERRED
+  DRAFT
 }
 
 enum SIMStatus {
   IN_PROGRESS
   COMPLETED
+}
+
+enum Status {
+  OPEN
+  UNKNOWN
+  SOLD
+  INACTIVE
+  OFF_MARKET
+  NOT_AVAILABLE
+  SALE_PENDING
+  UNDER_LOI
 }
 
 model AiScreening {

@@ -54,6 +54,8 @@ const BulkUploadDealsToDB = async (deals: TransformedDeal[]) => {
         brokerage: deal.brokerage || "", // Required in schema, use empty string as fallback
         dealType: DealType.MANUAL, // Fixed value, no fallback needed
         userId: userSession.user.id,
+        dealStatus: deal.dealStatus,
+        dealLink: deal.dealLink,
       })),
     });
 

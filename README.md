@@ -43,6 +43,7 @@ To configure Google authentication, set the following environment variables in y
 
 - `DATABASE_URL`: PostgreSQL connection string
 - `AI_API_KEY`: Your OpenAI API key (not required)
+- `REDIS_CLIENT_URL`: The URL to your Redis client running both the workers and the websocket (not required unless using `/api/scrape`.
   - Add the following lines, replacing the placeholder values with your actual credentials:
     ```env
     GOOGLE_CLIENT_ID=your-google-client-id

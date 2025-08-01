@@ -40,6 +40,8 @@ const BulkImportCard = () => {
             <li>Upload (Required, &quot;Y&quot; or &quot;N&quot;)</li>
             <li>UploadOnCRM (Required, &quot;Yes&quot; or &quot;No&quot;)</li>
             <li>Company Location (Optional)</li>
+            <li>Deal Status (Optional)</li>
+            <li>Deal Link (Required)</li>
           </ul>
         </div>
 
@@ -63,6 +65,8 @@ const BulkImportCard = () => {
                 "Upload",
                 "UploadOnCRM",
                 "Company Location",
+                "Deal Status",
+                "Deal Link",
               ];
               const ws = XLSX.utils.aoa_to_sheet([headers]);
               const wb = XLSX.utils.book_new();
@@ -91,6 +95,8 @@ const BulkImportCard = () => {
                 "Upload",
                 "UploadOnCRM",
                 "Company Location",
+                "Deal Status",
+                "Deal Link",
               ];
               const exampleData = [
                 headers,
@@ -110,6 +116,8 @@ const BulkImportCard = () => {
                   "Y",
                   "Yes",
                   "New York",
+                  "Open",
+                  "https://examplebrokerage.com/deal/example",
                 ],
               ];
               const ws = XLSX.utils.aoa_to_sheet(exampleData);
