@@ -29,8 +29,8 @@ export async function GET(
 
     if (
       versions.length === 0 ||
-      JSON.stringify(stripTimestamps(versions[versions.length - 1].snapshot)) !==
-        JSON.stringify(stripTimestamps(v.snapshot))
+       JSON.stringify(stripTimestamps(versions[versions.length - 1].snapshot as Record<string, any>)) !==
+        JSON.stringify(stripTimestamps(v.snapshot as Record<string, any>))
     ) {
       versions.push(v);
       seenSeconds.add(tsSec);

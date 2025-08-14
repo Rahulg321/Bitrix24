@@ -124,8 +124,8 @@ export default async function ManualDealSpecificPage(props: {
     companyLocation,
     industry,
     ebitdaMargin,
-    isReviewed,
-    isPublished,
+    reviewed,
+    published,
     tags,
     status,
     askingPrice,
@@ -179,23 +179,23 @@ export default async function ManualDealSpecificPage(props: {
             <span className="mb-1 text-xs font-medium text-muted-foreground">
               Reviewed
             </span>
-            <Badge
-              variant={isReviewed ? "default" : "secondary"}
-              className="px-3 py-1 text-xs"
-            >
-              {isReviewed ? "Yes" : "No"}
-            </Badge>
+              <Badge
+                variant={reviewed ? "default" : "secondary"}
+                className="px-3 py-1 text-xs"
+              >
+                {reviewed ? "Yes" : "No"}
+              </Badge>
           </div>
           <div className="flex flex-col items-center rounded-lg border border-border/20 bg-muted/40 p-3 shadow-sm">
             <span className="mb-1 text-xs font-medium text-muted-foreground">
               Published
             </span>
-            <Badge
-              variant={isPublished ? "default" : "secondary"}
-              className="px-3 py-1 text-xs"
-            >
-              {isPublished ? "Yes" : "No"}
-            </Badge>
+              <Badge
+                variant={published ? "default" : "secondary"}
+                className="px-3 py-1 text-xs"
+              >
+                {published ? "Yes" : "No"}
+              </Badge>
           </div>
           <div className="flex flex-col items-center rounded-lg border border-border/20 bg-muted/40 p-3 shadow-sm">
             <span className="mb-1 text-xs font-medium text-muted-foreground">
@@ -216,7 +216,7 @@ export default async function ManualDealSpecificPage(props: {
           </div>
           {tags && tags.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
+              {tags.map((tag: string) => (
                 <Badge key={tag}>{tag}</Badge>
               ))}
             </div>
@@ -232,8 +232,8 @@ export default async function ManualDealSpecificPage(props: {
         <DealSpecificationsDialog
           dealUid={uid}
           dealStatus={status}
-          dealReviewed={isReviewed}
-          dealPublished={isPublished}
+          dealReviewed={reviewed}
+          dealPublished={published}
           dealSeen={seen}
         />
 

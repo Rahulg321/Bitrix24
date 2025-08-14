@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import AddPocDialog from "./Dialogs/add-poc-dialog";
 import DeletePocButton from "./Buttons/delete-poc-button";
+import type { DealType } from "@prisma/client";
 
 interface POC {
   id: string;
@@ -12,7 +13,7 @@ interface POC {
   workPhone?: string | null;
 }
 
-const FetchDealPOC = ({ dealId }: { dealId: string }) => {
+const FetchDealPOC = ({ dealId, dealType }: { dealId: string; dealType: DealType }) => {
   const [pocs, setPocs] = useState<POC[]>([]);
   const [loading, setLoading] = useState(true);
 

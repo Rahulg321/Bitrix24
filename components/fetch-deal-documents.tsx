@@ -17,7 +17,7 @@ interface DealDocument {
   id: string;
   title: string;
   description: string | null;
-  category: string;
+  category: import("@prisma/client").DealDocumentCategory;
   documentUrl: string;
 }
 
