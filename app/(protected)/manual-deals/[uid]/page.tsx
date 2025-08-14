@@ -28,7 +28,7 @@ import PreviousPageButton from "@/components/PreviousPageButton";
 import { DealDetailItem } from "@/components/DealDetailItem";
 import AIReasoning from "@/components/AiReasoning";
 import SimItem from "@/components/SimItem";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import SimUploadDialog from "@/components/Dialogs/sim-upload-dialog";
 import FetchDealSim from "@/components/FetchDealSim";
 import SimItemSkeleton from "@/components/skeletons/SimItemSkeleton";

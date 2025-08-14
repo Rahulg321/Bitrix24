@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { redisClient } from "@/lib/redis";
+import { getRedisClient } from "@/lib/redis";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
 
   try {
     console.log("connecting to redis");
+    const redisClient = await getRedisClient();
     if (!redisClient.isOpen) {
       await redisClient.connect();
     }
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
   try {
     console.log("pushing all the deals to bitrix");
 
+    const redisClient = await getRedisClient();
     dealListings.forEach(async (dealListing: any) => {
       const dealListingWithUserId = {
         ...dealListing,
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
     });
 
     // publish the message that a new screening call request was made
-    await redisClient.publish(
+    await (await getRedisClient()).publish(
       "new_screen_call",
       JSON.stringify({
         userId: userSession.user.id,

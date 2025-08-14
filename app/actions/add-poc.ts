@@ -4,7 +4,7 @@ import {
   addPocFormSchema,
   AddPocFormValues,
 } from "@/components/forms/add-poc-form";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { User } from "@prisma/client";
 import { withAuthServerAction } from "@/lib/withAuth";
 import { revalidatePath } from "next/cache";

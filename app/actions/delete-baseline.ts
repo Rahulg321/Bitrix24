@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/firebase/init";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { del } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 

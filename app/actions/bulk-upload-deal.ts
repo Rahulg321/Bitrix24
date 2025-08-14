@@ -3,7 +3,7 @@
 import { db } from "@/lib/firebase/init";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { TransformedDeal } from "../types";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { DealType, User } from "@prisma/client";
 import { withAuthServerAction } from "@/lib/withAuth";
 import { auth } from "@/auth";

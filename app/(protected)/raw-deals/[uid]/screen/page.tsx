@@ -1,6 +1,6 @@
 import PreviousPageButton from "@/components/PreviousPageButton";
 import ScreenDealComponent from "@/components/ScreenDealComponent";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Metadata } from "next";
 import React, { Suspense } from "react";

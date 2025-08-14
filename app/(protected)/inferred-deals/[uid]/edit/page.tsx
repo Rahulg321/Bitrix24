@@ -2,7 +2,7 @@ import EditDealForm from "@/components/forms/edit-deal-form";
 import PreviousPageButton from "@/components/PreviousPageButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchSpecificInferredDeal } from "@/lib/firebase/db";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { Metadata } from "next";
 import React from "react";
 

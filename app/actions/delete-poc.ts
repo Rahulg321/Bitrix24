@@ -1,7 +1,7 @@
 "use server";
 
 import { withAuthServerAction } from "@/lib/withAuth";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { User } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 

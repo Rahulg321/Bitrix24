@@ -39,7 +39,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import PreviousPageButton from "@/components/PreviousPageButton";
 import ScreenDealDialog from "@/components/Dialogs/screen-deal-dialog";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { DealDetailItem } from "@/components/DealDetailItem";
 import AIReasoning from "@/components/AiReasoning";
 import SimUploadDialog from "@/components/Dialogs/sim-upload-dialog";

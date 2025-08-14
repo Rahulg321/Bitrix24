@@ -1,24 +1,48 @@
-import prismaDB from "@/lib/prisma";
-import React from "react";
-import SimItem from "@/components/SimItem";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { AlertTriangle } from "lucide-react";
-import { Button } from "./ui/button";
 import { DealType } from "@prisma/client";
 
-// this component will be used to fetch and display all sims for a particular deal
+const SimItem = dynamic(() => import("@/components/SimItem"), { ssr: false });
 
-const FetchDealSim = async ({
-  dealId,
-  dealType,
-}: {
+interface Props {
   dealId: string;
   dealType: DealType;
-}) => {
-  const sims = await prismaDB.sIM.findMany({
-    where: {
-      dealId: dealId,
-    },
-  });
+}
+
+interface Sim {
+  id: string;
+  title: string;
+  caption: string;
+  status: string;
+  fileUrl: string;
+}
+
+export default function FetchDealSim({ dealId, dealType }: Props) {
+  const [sims, setSims] = useState<Sim[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/deals/${dealId}/sims`);
+        if (res.ok) {
+          const data = (await res.json()) as Sim[];
+          setSims(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [dealId]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
@@ -47,6 +71,4 @@ const FetchDealSim = async ({
       )}
     </div>
   );
-};
-
-export default FetchDealSim;
+}

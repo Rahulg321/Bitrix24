@@ -129,8 +129,8 @@ export const GetAllDeals = async ({
       ? { ebitdaMargin: { gte: ebitdaMarginValue } }
       : {}),
     ...(showSeen ? { seen: { equals: showSeen } } : {}),
-    ...(showReviewed ? { isReviewed: { equals: showReviewed } } : {}),
-    ...(showPublished ? { isPublished: { equals: showPublished } } : {}),
+    ...(showReviewed ? { reviewed: { equals: showReviewed } } : {}),
+    ...(showPublished ? { published: { equals: showPublished } } : {}),
     ...(status ? { status: { equals: status } } : {}),
     ...(tags && tags.length > 0 ? { tags: { hasSome: tags } } : {}),
   };

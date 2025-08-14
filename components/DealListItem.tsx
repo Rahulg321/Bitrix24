@@ -35,8 +35,8 @@ export default function DealListItem({ deal, selected, onToggle }: Props) {
             </p>
             <p>Email: {deal.email}</p>
             <p>Status: {deal.status}</p>
-            <p>Reviewed: {deal.isReviewed ? "Yes" : "No"}</p>
-            <p>Published: {deal.isPublished ? "Yes" : "No"}</p>
+            <p>Reviewed: {deal.reviewed ? "Yes" : "No"}</p>
+            <p>Published: {deal.published ? "Yes" : "No"}</p>
             <p>LinkedIn: {deal.linkedinUrl}</p>
             <p>Phone: {deal.workPhone}</p>
           </div>

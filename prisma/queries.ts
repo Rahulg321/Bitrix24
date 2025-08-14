@@ -1,4 +1,4 @@
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 
 /**
  * Get a user by their ID

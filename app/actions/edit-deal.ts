@@ -2,7 +2,7 @@
 
 import { EditDealFormSchemaType } from "@/components/forms/edit-deal-form";
 import { db } from "@/lib/firebase/init";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { DealType } from "@prisma/client";
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { revalidatePath } from "next/cache";

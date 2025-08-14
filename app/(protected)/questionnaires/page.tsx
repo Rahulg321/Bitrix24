@@ -3,7 +3,7 @@ import BaseLineUploadForm from "@/components/forms/baseline-upload-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { fetchQuestionnaires } from "@/lib/firebase/db";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { Metadata } from "next";
 import React from "react";
 

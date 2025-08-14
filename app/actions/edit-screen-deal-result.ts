@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { screenDealSchemaType } from "@/lib/schemas";
 import { DealType } from "@prisma/client";
 import { revalidatePath } from "next/cache";

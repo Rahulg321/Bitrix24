@@ -1,6 +1,13 @@
 import { auth } from "@/auth";
-import { redisClient } from "@/lib/redis";
+import { getRedisClient } from "@/lib/redis";
 import { NextResponse } from "next/server";
+
+interface RedisDealListing {
+  id: string;
+  title: string;
+  ebitda: number;
+  userId: string;
+}
 
 export async function GET() {
   const userSession = await auth();
@@ -10,10 +17,8 @@ export async function GET() {
   }
 
   try {
-    // ensure connected
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
-    }
+    const redisClient = await getRedisClient();
+    if (!redisClient.isOpen) await redisClient.connect();
   } catch (error) {
     console.error("Error connecting to Redis:", error);
     return NextResponse.json(
@@ -23,25 +28,26 @@ export async function GET() {
   }
 
   try {
-    const raw = await redisClient.lRange("dealListings", 0, -1);
+    const raw = await (await getRedisClient()).lRange("dealListings", 0, -1);
 
-    // parse and filter by this user
-    const all = raw
-      .map((s) => {
+    // parse and filter by this user with typing
+    const all: RedisDealListing[] = raw
+      .map((s: string) => {
         try {
-          return JSON.parse(s);
+          return JSON.parse(s) as RedisDealListing;
         } catch {
           return null;
         }
       })
-      .filter((d) => d && d.userId === userSession.user.id);
+      .filter((d: RedisDealListing | null): d is RedisDealListing => !!d)
+      .filter((d: RedisDealListing) => d.userId === userSession.user.id);
 
-    // map to shape: { id, productName, status: "Pending" }
-    const pending = all.map(({ id, title, ebitda }) => ({
-      id,
-      title: title,
-      ebitda: ebitda,
-      status: "Pending",
+    // map to response shape
+    const pending = all.map((d: RedisDealListing) => ({
+      id: d.id,
+      title: d.title,
+      ebitda: d.ebitda,
+      status: "Pending" as const,
     }));
 
     console.log("pending", pending);

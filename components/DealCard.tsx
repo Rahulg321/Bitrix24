@@ -165,27 +165,27 @@ const DealCard = ({
 
           <InfoItem
             icon={
-              deal.isPublished ? (
+              deal.published ? (
                 <CheckCircle className="h-4 w-4 text-green-500" />
               ) : (
                 <Circle className="h-4 w-4 text-gray-400" />
               )
             }
             label="Published"
-            value={deal.isPublished ? "Yes" : "No"}
+            value={deal.published ? "Yes" : "No"}
             className="whitespace-nowrap"
           />
 
           <InfoItem
             icon={
-              deal.isReviewed ? (
+              deal.reviewed ? (
                 <Check className="h-4 w-4 text-blue-500" />
               ) : (
                 <Clock className="h-4 w-4 text-yellow-500" />
               )
             }
             label="Reviewed"
-            value={deal.isReviewed ? "Yes" : "No"}
+            value={deal.reviewed ? "Yes" : "No"}
             className="whitespace-nowrap"
           />
 

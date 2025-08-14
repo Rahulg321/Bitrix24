@@ -1,6 +1,6 @@
 "use server";
 import { auth } from "@/auth";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { DealType } from "@prisma/client";
 import { del } from "@vercel/blob";
 

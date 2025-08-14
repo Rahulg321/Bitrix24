@@ -47,8 +47,8 @@ export async function updateDealSpecificationsAction(
       data: {
         seen: validatedFields.data.seen,
         status: validatedFields.data.status,
-        isReviewed: validatedFields.data.isReviewed,
-        isPublished: validatedFields.data.isPublished,
+        reviewed: validatedFields.data.isReviewed,
+        published: validatedFields.data.isPublished,
       },
     });
 

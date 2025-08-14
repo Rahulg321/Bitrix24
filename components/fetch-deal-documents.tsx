@@ -1,35 +1,63 @@
-import prismaDB from "@/lib/prisma";
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { AlertTriangle } from "lucide-react";
 import { DealType } from "@prisma/client";
-import DealDocumentItem from "./DealDocumentItem";
 
-const FetchDealDocuments = async ({
-  dealId,
-  dealType,
-}: {
+const DealDocumentItem = dynamic(() => import("./DealDocumentItem"), { ssr: false });
+
+interface Props {
   dealId: string;
   dealType: DealType;
-}) => {
-  const dealDocuments = await prismaDB.dealDocument.findMany({
-    where: {
-      dealId: dealId,
-    },
-  });
+  refreshKey?: number;
+}
+
+interface DealDocument {
+  id: string;
+  title: string;
+  description: string | null;
+  category: import("@prisma/client").DealDocumentCategory;
+  documentUrl: string;
+}
+
+export default function FetchDealDocuments({ dealId, dealType, refreshKey }: Props) {
+  const [documents, setDocuments] = useState<DealDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/deals/${dealId}/deal-documents`);
+        if (res.ok) {
+          const data = (await res.json()) as DealDocument[];
+          setDocuments(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [dealId, refreshKey]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
-      {dealDocuments.length > 0 ? (
-        dealDocuments.map((dealDocument) => (
+      {documents.length > 0 ? (
+        documents.map((doc) => (
           <DealDocumentItem
-            key={dealDocument.id}
-            title={dealDocument.title}
-            description={dealDocument.description || ""}
-            category={dealDocument.category}
-            documentId={dealDocument.id}
+            key={doc.id}
+            title={doc.title}
+            description={doc.description || ""}
+            category={doc.category}
+            documentId={doc.id}
             dealId={dealId}
             dealType={dealType}
-            fileUrl={dealDocument.documentUrl}
+            fileUrl={doc.documentUrl}
           />
         ))
       ) : (
@@ -44,6 +72,4 @@ const FetchDealDocuments = async ({
       )}
     </div>
   );
-};
-
-export default FetchDealDocuments;
+}

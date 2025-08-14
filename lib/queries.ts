@@ -1,7 +1,7 @@
 // all our database queries for the app
 
 import { User } from "next-auth";
-import prismaDB from "./prisma";
+import prismaDB from "./prisma.server";
 import { withAuthServerAction } from "./withAuth";
 import axios from "axios";
 import { BitrixDealGET } from "@/app/types";

@@ -21,6 +21,8 @@
     "@ai-sdk/react": "^1.2.9",
     "@auth/prisma-adapter": "^2.7.4",
     "@clerk/nextjs": "^6.5.1",
+    "@faker-js/faker": "^9.9.0",
+    "@fontsource-variable/geist-mono": "^5.2.6",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "^6.1.0",
     "@radix-ui/react-accordion": "^1.2.1",
@@ -70,6 +72,7 @@
     "next": "15.0.3",
     "next-auth": "^5.0.0-beta.25",
     "next-themes": "^0.4.6",
+    "node-fetch": "^3.3.2",
     "openai": "^4.97.0",
     "pdf-parse": "^1.1.1",
     "react": "19.0.0-rc-66855b96-20241106",
@@ -106,5 +109,6 @@
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
-  }
+  },
+  "type": "module"
 }
