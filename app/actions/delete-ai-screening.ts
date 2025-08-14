@@ -1,5 +1,5 @@
 "use server";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { DealType } from "@prisma/client";
 
 import { revalidatePath } from "next/cache";

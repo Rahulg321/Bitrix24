@@ -1,7 +1,7 @@
 import React, { Suspense } from "react";
 import DealCardSkeleton from "@/components/skeletons/DealCardSkeleton";
 import { Metadata } from "next";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import DealCard from "@/components/DealCard";
 import getCurrentUserRole from "@/lib/data/current-user-role";
 import GetDeals from "@/app/actions/get-deal";

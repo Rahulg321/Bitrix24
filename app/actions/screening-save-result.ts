@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { openai } from "@/lib/ai/available-models";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { Sentiment } from "@prisma/client";
 import { generateObject } from "ai";
 import { revalidatePath } from "next/cache";

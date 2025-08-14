@@ -40,11 +40,13 @@ import { toast } from "sonner";
 interface DealDocumentUploadDialogProps {
   dealId: string;
   dealType: DealType;
+  onUploaded?: () => void;
 }
 
 const DealDocumentUploadDialog: React.FC<DealDocumentUploadDialogProps> = ({
   dealId,
   dealType,
+  onUploaded,
 }) => {
   const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -79,6 +81,7 @@ const DealDocumentUploadDialog: React.FC<DealDocumentUploadDialogProps> = ({
           toast.success("Document uploaded successfully");
           form.reset();
           setIsOpen(false);
+          onUploaded?.();
         } else {
           throw new Error(result.statusText);
         }

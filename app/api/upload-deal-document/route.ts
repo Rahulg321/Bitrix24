@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { dealDocumentFormSchema } from "@/lib/schemas";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";

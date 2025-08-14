@@ -1,4 +1,4 @@
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 
 async function main() {
   const deals = await prismaDB.deal.findMany();

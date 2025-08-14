@@ -1,6 +1,6 @@
 "use server";
 
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 

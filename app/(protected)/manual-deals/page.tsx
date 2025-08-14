@@ -2,7 +2,7 @@ import DealCardSkeleton from "@/components/skeletons/DealCardSkeleton";
 import { Metadata } from "next";
 import React, { Suspense } from "react";
 import FetchingManualDeals from "./FetchingManualDeals";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import DealCard from "@/components/DealCard";
 import GetDeals from "@/app/actions/get-deal";
 import Pagination from "@/components/pagination";

@@ -68,6 +68,7 @@ model Deal {
   revenue         Float
   ebitda          Float
   title           String?
+  description     String?
   dealTeaser      String?
   grossRevenue    Float?
   askingPrice     Float?
@@ -78,8 +79,16 @@ model Deal {
   companyLocation String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @default(now()) @updatedAt
+  publishedAt     DateTime?
   SIM             SIM[]
   AiScreening     AiScreening[]
+  history         DealHistory[]
+  status          DealStatus    @default(AVAILABLE)
+  tags            String[]      @default([])
+  reviewed        Boolean       @default(false)
+  seen            Boolean       @default(false)
+  bitrixLink      String?
+  published       Boolean       @default(false)
 
   bitrixLink  String?
   status      DealStatus @default(NOT_SPECIFIED)
@@ -170,6 +179,12 @@ enum SIMStatus {
   COMPLETED
 }
 
+enum DealStatus {
+  AVAILABLE
+  SOLD
+  UNDER_CONTRACT
+}
+
 model AiScreening {
   id          String    @id @default(cuid())
   dealId      String
@@ -205,4 +220,12 @@ model Employee {
 
   Deal   Deal?   @relation(fields: [dealId], references: [id])
   dealId String?
+}
+
+model DealHistory {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  snapshot  Json // JSON of the Deal at that moment
+  createdAt DateTime @default(now())
 }

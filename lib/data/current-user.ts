@@ -1,6 +1,6 @@
 // helper function to get the current User
 
-import prismaDB from "../prisma";
+import prismaDB from "../prisma.server";
 
 /**
  * get the current user by using their id

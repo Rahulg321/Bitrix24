@@ -4,7 +4,7 @@
 import axios from "axios";
 import { Deal, User } from "@prisma/client";
 import { auth } from "@/auth";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { revalidatePath } from "next/cache";
 import { withAuthServerAction } from "@/lib/withAuth";
 

@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { InferDealSchema } from "@/components/schemas/infer-deal-schema";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 
 export default async function SaveInferredDeal({
   generation,

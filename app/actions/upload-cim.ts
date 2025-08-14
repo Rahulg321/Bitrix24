@@ -4,7 +4,7 @@ import { put } from "@vercel/blob";
 import { DealType, PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { cimFormSchema } from "@/lib/schemas";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 
 export default async function UploadCim(
   data: FormData,

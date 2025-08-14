@@ -1,0 +1,10 @@
+-- CreateEnum
+CREATE TYPE "DealStatus" AS ENUM ('AVAILABLE', 'SOLD', 'UNDER_CONTRACT');
+
+-- AlterTable
+ALTER TABLE "Deal" ADD COLUMN     "bitrixLink" TEXT,
+ADD COLUMN     "published" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "reviewed" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "seen" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "status" "DealStatus" NOT NULL DEFAULT 'AVAILABLE',
+ADD COLUMN     "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];

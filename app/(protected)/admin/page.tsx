@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import React from "react";
 import { DataTable } from "./data-table";
 import { columns } from "./columns";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 
 const AdminPage = async () => {
   const currentUserRole = await getCurrentUserRole();

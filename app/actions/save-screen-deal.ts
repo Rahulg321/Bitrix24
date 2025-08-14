@@ -5,7 +5,7 @@ import {
   NewDealFormSchema,
   NewDealFormSchemaType,
 } from "@/components/forms/new-deal-form";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { screenDealSchemaType } from "@/lib/schemas";
 import { DealType } from "@prisma/client";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";

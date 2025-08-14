@@ -1,5 +1,5 @@
 import ProfileForm from "@/components/forms/profile-form";
-import prismaDB from "@/lib/prisma";
+import prismaDB from "@/lib/prisma.server";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import React from "react";

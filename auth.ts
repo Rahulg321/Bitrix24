@@ -1,6 +1,6 @@
 import NextAuth, { DefaultSession } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import prismaDB from "./lib/prisma";
+import prismaDB from "./lib/prisma.server";
 import { User, UserRole } from "@prisma/client";
 import authConfig from "./auth.config";
 import { getCurrentUserByEmail } from "./lib/data/current-user";
@@ -12,6 +12,7 @@ const adminEmails = [
   "diligence@darkalphacapital.com",
   "da@darkalphacapital.com",
   "daigbe@gmail.com",
+  "kshah77@asu.edu"
 ];
 
 declare module "next-auth" {
