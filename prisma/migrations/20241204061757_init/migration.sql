@@ -1,7 +1,9 @@
--- CreateTable
-CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
+---Add Ebitda margin where needed data exists
+UPDATE "Deal"
+    SET "ebitdaMargin" = ("ebitda"/"revenue")
+    WHERE NOT "revenue" = 0 AND NOT "ebitda" = 0;
 
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-);
+---Set Ebitda Margin to -1 when necessary data does not exist
+UPDATE "Deal"
+    SET "ebitdaMargin" = -1
+    WHERE "revenue" = 0 OR "ebitda" = 0;
