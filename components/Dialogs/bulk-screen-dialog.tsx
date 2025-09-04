@@ -169,7 +169,10 @@ function BulkScreenComponent({
         >
           <option value="">Choose a screener...</option>
           {data &&
-            data.map((screener) => (
+            [...data, {
+              id: "blablabla",
+              name: "testing 123"
+            }].map((screener) => (
               <option key={screener.id} value={screener.id}>
                 {screener.name}
               </option>

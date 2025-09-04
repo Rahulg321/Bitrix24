@@ -23,6 +23,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { TransformedDeal } from "@/app/types";
 import { useToast } from "@/hooks/use-toast";
 import BulkUploadDealsToDB from "@/app/actions/bulk-upload-deal";
+import BulkScreenDeals from "@/app/actions/bulk-screen";
 
 type SheetDeal = {
   Brokerage: string;
@@ -153,24 +154,49 @@ export function BulkImportDialog() {
 
     const formattedDeals = transformDeals(deals);
     console.log("formattedDeals", formattedDeals);
-    const response = await BulkUploadDealsToDB(formattedDeals);
+    const uploadResponse = await BulkUploadDealsToDB(formattedDeals);
 
-    if (response.error) {
-      setError(response.error);
+    // TODO: no console logs past this point seem to have any effect
+    // toasting and closing the dialog doesn't work
+
+    if (uploadResponse.status != 200) {
+      setError(uploadResponse.message);
       toast({
         title: "Error uploading deals",
         variant: "destructive",
-        description: response.error,
+        description: uploadResponse.message,
       });
-    } else {
-      setSuccess("Deals uploaded successfully");
-      setDeals([]);
-      setFile(null);
-      toast({ title: "Deals uploaded successfully" });
+
+      setUploading(false);
+      setUploadComplete(true);
+      return;
     }
+
+    const screenResponse = await BulkScreenDeals(uploadResponse.dbDeals!, "").finally(() => console.log("HERE"));
+    if (screenResponse.status != 200) {
+      setError(screenResponse.message);
+      toast({
+        title: "Error screening deals",
+        variant: "destructive",
+        description: screenResponse.message,
+      });
+
+      setUploading(false);
+      setUploadComplete(true);
+      console.log("ERROR")
+      return;
+    }
+
+    setSuccess("Deals uploaded successfully");
+    setDeals([]);
+    setFile(null);
+
+    // toasting doesn't appear to work
+    toast({ title: "Deals uploaded successfully" });
 
     setUploading(false);
     setUploadComplete(true);
+    setIsOpen(false);
   };
 
   return (
