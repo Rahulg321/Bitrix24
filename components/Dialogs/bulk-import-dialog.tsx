@@ -23,6 +23,11 @@ import { ScrollArea } from "../ui/scroll-area";
 import { TransformedDeal } from "@/app/types";
 import { useToast } from "@/hooks/use-toast";
 import BulkUploadDealsToDB from "@/app/actions/bulk-upload-deal";
+import BulkScreenDeals from "@/app/actions/bulk-screen";
+
+import useSWR from "swr";
+import { DealScreenersGET } from "@/app/types";
+import { fetcher } from "@/lib/utils";
 
 type SheetDeal = {
   Brokerage: string;
@@ -51,6 +56,15 @@ export function BulkImportDialog() {
   const [success, setSuccess] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadComplete, setUploadComplete] = useState(false);
+
+  const {
+    data: screeners,
+    error: screenerFetchError,
+    isLoading,
+  } = useSWR<DealScreenersGET>(`/api/deal-screeners`, fetcher);
+  const [selectedScreenerId, setSelectedScreenerId] = React.useState<
+    string | null
+  >(null);
 
   const expectedHeaders = [
     "Brokerage",
@@ -153,21 +167,58 @@ export function BulkImportDialog() {
 
     const formattedDeals = transformDeals(deals);
     console.log("formattedDeals", formattedDeals);
-    const response = await BulkUploadDealsToDB(formattedDeals);
+    const uploadResponse = await BulkUploadDealsToDB(formattedDeals);
 
-    if (response.error) {
-      setError(response.error);
+    if (uploadResponse.status != 200) {
+      setError(uploadResponse.message);
       toast({
         title: "Error uploading deals",
         variant: "destructive",
-        description: response.error,
+        description: uploadResponse.message,
       });
-    } else {
+
+      setUploading(false);
+      setUploadComplete(true);
+      return;
+    }
+    console.log(selectedScreenerId)
+    if (selectedScreenerId === null) {
       setSuccess("Deals uploaded successfully");
       setDeals([]);
       setFile(null);
-      toast({ title: "Deals uploaded successfully" });
+
+      setUploading(false);
+      setUploadComplete(true);
+      return;
     }
+
+    const screenerContent = screeners?.find(
+      (screener) => screener.id === selectedScreenerId,
+    )?.content;
+
+    const screenResponse = await BulkScreenDeals(
+      uploadResponse.dbDeals!,
+      screenerContent!,
+    );
+    if (screenResponse.status != 200) {
+      setError(screenResponse.message);
+      toast({
+        title: "Error screening deals",
+        variant: "destructive",
+        description: screenResponse.message,
+      });
+
+      setUploading(false);
+      setUploadComplete(true);
+      return;
+    }
+
+    setSuccess("Deals uploaded successfully");
+    setDeals([]);
+    setFile(null);
+
+    // toasting doesn't appear to work
+    toast({ title: "Deals uploaded successfully" });
 
     setUploading(false);
     setUploadComplete(true);
@@ -175,7 +226,13 @@ export function BulkImportDialog() {
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          setSuccess(null);
+          setIsOpen(open);
+        }}
+      >
         <DialogTrigger asChild>
           <Button className="w-full">
             <Upload className="mr-2 h-4 w-4" />
@@ -230,6 +287,32 @@ export function BulkImportDialog() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               )}
+            </div>
+            <div>
+              <label
+                className="mb-2 block text-sm font-medium"
+                htmlFor="screener-select"
+              >
+                Select Screener
+              </label>
+              <select
+                id="screener-select"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                value={selectedScreenerId ?? ""}
+                onChange={(e) =>
+                  setSelectedScreenerId(
+                    e.target.value === "" ? null : e.target.value,
+                  )
+                }
+              >
+                <option value="">No Screener</option>
+                {screeners &&
+                  screeners.map((screener) => (
+                    <option key={screener.id} value={screener.id}>
+                      {screener.name}
+                    </option>
+                  ))}
+              </select>
             </div>
           </ScrollArea>
           <Button

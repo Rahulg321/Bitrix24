@@ -2,7 +2,7 @@
 
 import { TransformedDeal } from "../types";
 import prismaDB from "@/lib/prisma";
-import { DealType } from "@prisma/client";
+import { Deal, DealType } from "@prisma/client";
 import { auth } from "@/auth";
 import { rateLimit } from "@/lib/redis";
 import { headers } from "next/headers";
@@ -14,15 +14,16 @@ import { headers } from "next/headers";
  * Each deal is added to the "manual-deals" collection with a timestamp.
  *
  * @param {TransformedDeal[]} deals - An array of deals conforming to the `TransformedDeal` type.
- * @returns {Promise<{ type: string; message: string; failedDeals?: TransformedDeal[] }>}
+ * @returns {Promise<{ status: number; message: string; dbDeals?: Deal[] }>}
  *          Returns an object indicating success or failure and lists any deals that failed to upload.
  */
-const BulkUploadDealsToDB = async (deals: TransformedDeal[]) => {
+const BulkUploadDealsToDB = async (deals: TransformedDeal[]): Promise<{ status: number; message: string; dbDeals?: Deal[]; }> => {
   const userSession = await auth();
 
   if (!userSession) {
     return {
-      error: "unauthorized user",
+      status: 401,
+      message: "Unauthorized user",
     };
   }
 
@@ -38,20 +39,22 @@ const BulkUploadDealsToDB = async (deals: TransformedDeal[]) => {
     console.log("Rate limit excedded for bulk upload db");
 
     return {
-      error: "Too many requests",
+      status: 429,
+      message: "Too many requests",
     };
   }
 
-  if (!Array.isArray(deals) || deals.length === 0) {
+  if (deals.length === 0) {
     return {
-      error: "No deals or a valid array provided for bulk upload.",
+      status: 400,
+      message: "No deals provided for bulk upload.",
     };
   }
 
   console.log("deals received", deals);
-
+  let dbDeals: Deal[] = [];
   try {
-    await prismaDB.deal.createMany({
+    dbDeals = await prismaDB.deal.createManyAndReturn({
       data: deals.map((deal) => ({
         title: deal.dealCaption || null, // Title is optional in schema, use null as fallback
         dealCaption: deal.dealCaption || "", // Required in schema, use empty string as fallback
@@ -73,13 +76,15 @@ const BulkUploadDealsToDB = async (deals: TransformedDeal[]) => {
     });
 
     return {
-      success: `${deals.length} deals uploaded successfully.`,
+      status: 200,
+      message: "Bulk upload successful",
+      dbDeals,
     };
   } catch (error) {
-    console.error("Bulk upload error:", error);
-
+    console.error("Bulk upload message:", error);
     return {
-      error: "Bulk upload failed due to a server error.",
+      status: 500,
+      message: "Bulk upload failed due to a server error.",
     };
   }
 };
