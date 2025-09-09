@@ -7,6 +7,8 @@ import { getCurrentUserByEmail } from "./lib/data/current-user";
 
 const adminEmails = [
   "rg5353070@gmail.com",
+  "amani.151413@gmail.com",
+  "rahul@darkalphacapital.com",
   "destiny@darkalphacapital.com",
   "daigbe@darkalphacapital.com",
   "diligence@darkalphacapital.com",

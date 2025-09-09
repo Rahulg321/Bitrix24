@@ -8,7 +8,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { BellIcon, Clock, TrendingUp, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import React, { useEffect, useState, useTransition } from "react";
+import React, {
+  useEffect,
+  useState,
+  useTransition,
+  useCallback,
+  useRef,
+} from "react";
 import { ScrollArea } from "./ui/scroll-area";
 
 type PendingDeal = {
@@ -18,20 +24,45 @@ type PendingDeal = {
   status: string;
 };
 
+type WebSocketMessage = {
+  type: string;
+  productId?: string;
+  status?: string;
+  userId?: string;
+};
+
 const NotificationPopover = ({ userId }: { userId: string }) => {
   const [open, setOpen] = useState(false);
   const [deals, setDeals] = useState<PendingDeal[]>([]);
-
+  const [wsConnected, setWsConnected] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryDelayRef = useRef(1000);
+
+  const fetchDeals = useCallback(async () => {
+    try {
+      const res = await fetch("/api/deals/pending");
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      const data: PendingDeal[] = await res.json();
+      console.log("📊 Fetched deals:", data);
+      setDeals(data);
+    } catch (error) {
+      console.error("❌ Error fetching deals:", error);
+    }
+  }, []);
+
+  const fetchAndTransition = useCallback(() => {
+    startTransition(() => {
+      fetchDeals();
+    });
+  }, [fetchDeals]);
 
   useEffect(() => {
-    startTransition(() => {
-      fetch("/api/deals/pending")
-        .then((res) => res.json())
-        .then((data: PendingDeal[]) => setDeals(data))
-        .catch(console.error);
-    });
-  }, [open]);
+    fetchAndTransition();
+  }, [open, fetchAndTransition]);
 
   const formatEbitda = (ebitda: number) => {
     if (ebitda >= 1000000) {
@@ -42,59 +73,66 @@ const NotificationPopover = ({ userId }: { userId: string }) => {
     return `$${ebitda.toLocaleString()}`;
   };
 
-  useEffect(() => {
-    const ws = new WebSocket(process.env.NEXT_PUBLIC_WEBSOCKET_URL as string);
+  const connectWebSocket = useCallback(() => {
+    const url = process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080";
+
+    const ws = new WebSocket(url);
+    wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log("✅ websocket connected");
-
-      ws.send(
-        JSON.stringify({
-          type: "register",
-          userId,
-        }),
-      );
+      setWsConnected(true);
+      ws.send(JSON.stringify({ type: "register", userId }));
+      retryDelayRef.current = 1000;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
     };
-
     ws.onmessage = (e) => {
-      console.log("received a websocket event");
-      console.log(e.data);
-
       try {
-        const msg = JSON.parse(e.data);
-
-        if (msg.type === "problem_done") {
-          setDeals((prev) => {
-            const updatedDeals = prev.filter((d) => d.id !== msg.productId);
-
-            if (prev.length !== updatedDeals.length) {
-              console.log(
-                `Deal ${msg.productId} completed with status: ${msg.status}`,
-              );
-            }
-
-            return updatedDeals;
-          });
-        }
-      } catch (error) {
-        console.error("Error parsing websocket message:", error);
-      }
+        const msg: WebSocketMessage = JSON.parse(e.data);
+        if (msg.type === "new_screen_call") fetchAndTransition();
+        if (msg.type === "problem_done" && msg.productId) fetchAndTransition();
+      } catch {}
     };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+    const scheduleReconnect = () => {
+      if (reconnectTimeoutRef.current) return;
+      const delay = Math.min(retryDelayRef.current, 10000);
+      reconnectTimeoutRef.current = setTimeout(() => {
+        reconnectTimeoutRef.current = null;
+        connectWebSocket();
+      }, delay);
+      retryDelayRef.current = Math.min(delay * 2, 10000);
     };
-
     ws.onclose = () => {
-      console.log("WebSocket connection closed");
+      setWsConnected(false);
+      scheduleReconnect();
     };
+    ws.onerror = () => {
+      setWsConnected(false);
+      scheduleReconnect();
+    };
+  }, [userId, fetchAndTransition]);
 
+  useEffect(() => {
+    if (!userId) return;
+    connectWebSocket();
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
+      wsRef.current?.close();
+      wsRef.current = null;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
+      retryDelayRef.current = 1000;
     };
-  }, [userId]);
+  }, [userId, connectWebSocket]);
+
+  useEffect(() => {
+    const onFocus = () => fetchAndTransition();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [fetchAndTransition]);
 
   return (
     <div className="relative">
@@ -110,6 +148,12 @@ const NotificationPopover = ({ userId }: { userId: string }) => {
                 {deals.length > 99 ? "99+" : deals.length}
               </Badge>
             )}
+            <div
+              className={cn(
+                "absolute -bottom-0 -right-0 size-2 rounded-full",
+                wsConnected ? "bg-green-500" : "bg-red-500",
+              )}
+            />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="end">
@@ -119,11 +163,19 @@ const NotificationPopover = ({ userId }: { userId: string }) => {
                 <FileText className="size-4" />
                 Your Deals Queue
               </h5>
-              {deals.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {deals.length} pending
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {deals.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {deals.length} pending
+                  </Badge>
+                )}
+                <div
+                  className={cn(
+                    "size-2 rounded-full",
+                    wsConnected ? "bg-green-500" : "bg-red-500",
+                  )}
+                />
+              </div>
             </div>
           </div>
 
@@ -137,7 +189,21 @@ const NotificationPopover = ({ userId }: { userId: string }) => {
               </div>
             )}
 
-            {deals.length === 0 && !isPending && (
+            {!wsConnected && !isPending && (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="mb-3 size-12 rounded-full bg-red-100 p-2 dark:bg-red-900/20">
+                  <div className="size-8 rounded-full bg-red-500"></div>
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Connection lost
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  Attempting to reconnect...
+                </p>
+              </div>
+            )}
+
+            {deals.length === 0 && !isPending && wsConnected && (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Clock className="mb-3 size-12 text-muted-foreground/50" />
                 <p className="text-sm font-medium text-muted-foreground">

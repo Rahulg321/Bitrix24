@@ -124,3 +124,117 @@ export const getDealPOC = async (dealId: string) => {
     throw new Error("Error fetching deal POC");
   }
 };
+
+/**
+ * Get all screeners
+ * @returns all screeners
+ */
+export async function getAllScreeners() {
+  try {
+    return await prismaDB.screener.findMany({
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching all screeners", error);
+    return null;
+  }
+}
+
+/**
+ * Get all screeners
+ * @returns all screeners
+ */
+export async function getAllScreenersWithContent() {
+  try {
+    return await prismaDB.screener.findMany({
+      select: {
+        id: true,
+        name: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching all screeners", error);
+    return null;
+  }
+}
+
+/**
+ * Get all deal reasonings with screener name
+ * @param dealId - the id of the deal
+ * @returns all deal reasonings with screener name
+ */
+export async function getAllDealReasoningsWithScreenerName(dealId: string) {
+  try {
+    return await prismaDB.aiScreening.findMany({
+      where: {
+        dealId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        title: true,
+        sentiment: true,
+        score: true,
+        explanation: true,
+        createdAt: true,
+        updatedAt: true,
+        screener: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Error fetching all deal reasonings with screener name",
+      error,
+    );
+    return null;
+  }
+}
+
+/**
+ * Get a complete ai reasoning by id
+ * @param reasoningId - the id of the reasoning
+ * @returns the complete ai reasoning
+ */
+export async function getCompleteAiReasoningById(reasoningId: string) {
+  try {
+    return await prismaDB.aiScreening.findUnique({
+      where: {
+        id: reasoningId,
+      },
+      select: {
+        id: true,
+        title: true,
+        sentiment: true,
+        score: true,
+        content: true,
+        explanation: true,
+        createdAt: true,
+        updatedAt: true,
+        screener: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+}

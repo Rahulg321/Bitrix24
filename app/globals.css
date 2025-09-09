@@ -37,9 +37,9 @@
     --sidebar-accent-foreground: 0 0% 9.0196%;
     --sidebar-border: 0 0% 89.8039%;
     --sidebar-ring: 0 0% 63.1373%;
-    --font-sans: Geist Mono, monospace;
-    --font-serif: Geist Mono, monospace;
-    --font-mono: Geist Mono, monospace;
+    --font-sans: Poppins, sans-serif;
+    --font-serif: Poppins, sans-serif;
+    --font-mono: Poppins, sans-serif;
     --radius: 0rem;
     --shadow-2xs: 0px 1px 0px 0px hsl(0 0% 0% / 0);
     --shadow-xs: 0px 1px 0px 0px hsl(0 0% 0% / 0);
@@ -145,10 +145,6 @@
   }
 }
 
-* {
-  font-family: var(--font-lora);
-}
-
 .bg-gradient-radial-sunset {
   background-image: linear-gradient(to bottom, #ac0003 -2.94%, #ea2123 97.06%);
 }
@@ -211,7 +207,7 @@
 }
 
 * {
-  font-family: var(--font-lora);
+  font-family: var(--font-poppins);
 }
 
 h1,
@@ -222,7 +218,7 @@ span,
 p ul,
 li h5,
 h6 {
-  font-family: var(--font-lora);
+  font-family: var(--font-poppins);
 }
 
 @media screen and (max-width: 1024px) {

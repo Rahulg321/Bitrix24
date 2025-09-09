@@ -170,6 +170,17 @@ enum SIMStatus {
   COMPLETED
 }
 
+model Screener {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  content     String
+  fileUrl     String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  AiScreening AiScreening[]
+}
+
 model AiScreening {
   id          String    @id @default(cuid())
   dealId      String
@@ -179,8 +190,12 @@ model AiScreening {
   score       Int?
   content     String?
   sentiment   Sentiment @default(NEUTRAL)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+
+  screenerId String?
+  screener   Screener? @relation(fields: [screenerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Sentiment {

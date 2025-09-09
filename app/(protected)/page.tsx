@@ -1,20 +1,14 @@
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowRight,
-  Search,
-  FileSpreadsheet,
-  Brain,
-  Filter,
-  FileText,
-  BarChart,
-  Zap,
-  Users,
-  Globe,
-} from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 const Home = async () => {
+  const userSession = await auth();
+
+  if (!userSession) redirect("/auth/login");
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}

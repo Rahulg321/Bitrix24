@@ -1,7 +1,6 @@
 import EditDealForm from "@/components/forms/edit-deal-form";
 import PreviousPageButton from "@/components/PreviousPageButton";
 import { Card, CardContent } from "@/components/ui/card";
-import { fetchSpecificManualDeal } from "@/lib/firebase/db";
 import prismaDB from "@/lib/prisma";
 import { Metadata } from "next";
 import React from "react";
@@ -24,7 +23,7 @@ export async function generateMetadata(props: {
       title: `Edit ${fetchedDeal?.dealCaption}` || "Dark Alpha Capital",
       description: `Make changes to the details of the ${fetchedDeal?.dealCaption} deal`,
     };
-  } catch (error) {
+  } catch {
     return {
       title: "Not Found",
       description: "The page you are looking for does not exist",

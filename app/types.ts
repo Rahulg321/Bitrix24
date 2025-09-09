@@ -65,3 +65,13 @@ export type BitrixDealGET = {
   brokerage: string;
   dealType: "MANUAL";
 };
+
+export type DealScreenersGET =
+  | {
+      id: string;
+      name: string;
+      content: string;
+      createdAt: Date;
+      updatedAt: Date;
+    }[]
+  | null;

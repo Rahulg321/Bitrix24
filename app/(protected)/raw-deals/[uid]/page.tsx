@@ -10,15 +10,11 @@ import {
   MapPin,
   Tag,
   Phone,
-  Mail,
   Briefcase,
   Building,
   Percent,
   Plus,
-  Upload,
   CheckCircle,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -39,8 +35,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { exportDealToBitrix } from "@/app/actions/upload-bitrix";
-import { toast } from "sonner";
 import UploadDealToBitrixButton from "@/components/Buttons/upload-deal-bitrix-button";
 import FetchDealPOC from "@/components/FetchDealPOC";
 import DealDocumentUploadDialog from "@/components/Dialogs/deal-document-upload-dialog";
@@ -69,6 +63,7 @@ export async function generateMetadata(props: {
       description: fetchedDeal?.dealCaption || "Raw Deal Page",
     };
   } catch (error) {
+    console.log(error);
     return {
       title: "Not Found",
       description: "The page you are looking for does not exist",
@@ -373,7 +368,10 @@ export default async function ManualDealSpecificPage(props: {
 
         <Card className="">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>AI Reasoning</CardTitle>
+            <CardTitle>AI Reasoning(Top3)</CardTitle>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/raw-deals/${uid}/reasonings`}>All Reasonings</Link>
+            </Button>
 
             <Button variant="outline" size="sm" asChild>
               <Link href={`/raw-deals/${uid}/screen`}>

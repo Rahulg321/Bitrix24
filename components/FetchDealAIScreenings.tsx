@@ -16,6 +16,10 @@ const FetchDealAIScreenings = async ({
     where: {
       dealId: dealId,
     },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 3,
   });
 
   return (

@@ -1,17 +1,16 @@
-version: "3.9"
+version: "3.8"
 
 services:
-  the-bitrix24-db:
-    image: postgres
+  redis:
+    image: redis:alpine
+    container_name: redis-service
     restart: always
-    container_name: the-bitrix24-db
     ports:
-      - 5432:5432
-    environment:
-      POSTGRES_PASSWORD: example
-      PGDATA: /data/postgres
+      - "6379:6379"
+    command: redis-server --appendonly yes
     volumes:
-      - postgres:/data/postgres
+      - redis-data:/data
 
 volumes:
-  postgres:
+  redis-data:
+    driver: local

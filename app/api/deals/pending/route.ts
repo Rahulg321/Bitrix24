@@ -10,23 +10,8 @@ export async function GET() {
   }
 
   try {
-    // ensure connected
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
-    }
-  } catch (error) {
-    console.error("Error connecting to Redis:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
-  }
-
-  try {
-    const raw = await redisClient.lRange("dealListings", 0, -1);
-
-    // parse and filter by this user
-    const all = raw
+    const raw = await redisClient.lrange("dealListings", 0, -1);
+    const pending = raw
       .map((s) => {
         try {
           return JSON.parse(s);
@@ -34,21 +19,19 @@ export async function GET() {
           return null;
         }
       })
-      .filter((d) => d && d.userId === userSession.user.id);
+      .filter((d) => d && d.userId === userSession.user.id)
+      .map(({ id, title, ebitda }) => ({
+        id,
+        title,
+        ebitda,
+        status: "Pending",
+      }));
 
-    // map to shape: { id, productName, status: "Pending" }
-    const pending = all.map(({ id, title, ebitda }) => ({
-      id,
-      title: title,
-      ebitda: ebitda,
-      status: "Pending",
-    }));
-
-    console.log("pending", pending);
+    console.log("pending items inside route", pending);
 
     return NextResponse.json(pending);
   } catch (error) {
-    console.error(error);
+    console.error("Error reading pending deals:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

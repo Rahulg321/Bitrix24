@@ -73,6 +73,7 @@ export const GetAllDeals = async ({
   showPublished,
   status,
   tags,
+  showRecent,
 }: {
   search?: string | undefined;
   offset?: number;
@@ -92,6 +93,7 @@ export const GetAllDeals = async ({
   showPublished?: boolean;
   status?: DealStatus;
   tags?: string[];
+  showRecent?: boolean;
 }): Promise<GetDealsResult> => {
   const ebitdaValue = ebitda ? parseFloat(ebitda) : undefined;
   const revenueValue = revenue ? parseFloat(revenue) : undefined;
@@ -101,6 +103,10 @@ export const GetAllDeals = async ({
   const brokerageValue = brokerage ? brokerage : undefined;
   const industryValue = industry ? industry : undefined;
   const ebitdaMarginValue = ebitdaMargin ? parseFloat(ebitdaMargin) : undefined;
+
+  const orderBy = showRecent
+    ? { createdAt: "desc" as const }
+    : { createdAt: "asc" as const };
 
   const whereClause = {
     ...(search ? { dealCaption: { contains: search } } : {}),
@@ -140,9 +146,7 @@ export const GetAllDeals = async ({
       where: whereClause,
       skip: offset,
       take: limit,
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy,
     }),
     prismaDB.deal.count({
       where: whereClause,

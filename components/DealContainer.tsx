@@ -21,7 +21,7 @@ import { Button } from "./ui/button";
 import BulkDeleteDealsFromDb from "@/app/actions/bulk-delete-deals";
 import { toast } from "sonner";
 
-import axios from "axios";
+import { BulkScreenDialog } from "./Dialogs/bulk-screen-dialog";
 
 interface DealContainerProps {
   data: Deal[];
@@ -35,7 +35,6 @@ export default function DealContainer({ data, userRole }: DealContainerProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [isScreeningPending, startScreenTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
   const allSelected = data.length > 0 && selectedIds.size === data.length;
@@ -65,31 +64,6 @@ export default function DealContainer({ data, userRole }: DealContainerProps) {
         toast.success(response.message);
       } else {
         toast.error(response.message);
-      }
-    });
-  }
-
-  async function handleBulkScreen() {
-    startScreenTransition(async () => {
-      if (!selectedIds.size) return;
-      const ids = Array.from(selectedIds).join(",");
-      const filteredData = data.filter((d) => selectedIds.has(d.id));
-
-      try {
-        const response = await axios.post(`/api/screen-all`, {
-          dealListings: filteredData,
-        });
-
-        if (response.status !== 200) {
-          throw new Error("Something went wrong");
-        }
-
-        console.log(response.data);
-
-        toast.success("Deals Added to Queue");
-      } catch (error) {
-        console.log(error);
-        toast.error("Something went wrong");
       }
     });
   }
@@ -162,17 +136,10 @@ export default function DealContainer({ data, userRole }: DealContainerProps) {
               </AlertDialogContent>
             </AlertDialog>
 
-            <Button
-              onClick={handleBulkScreen}
-              disabled={!selectedIds.size || isScreeningPending}
-              className={` ${
-                selectedIds.size
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "cursor-not-allowed bg-muted text-muted-foreground"
-              }`}
-            >
-              {isScreeningPending ? "Screening..." : "Screen Selected"}
-            </Button>
+            <BulkScreenDialog
+              deals={data}
+              selectedIds={Array.from(selectedIds)}
+            />
           </div>
         )}
       </div>

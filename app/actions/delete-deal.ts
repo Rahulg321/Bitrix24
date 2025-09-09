@@ -1,22 +1,9 @@
 "use server";
 
-import {
-  NewDealFormSchema,
-  NewDealFormSchemaType,
-} from "@/components/forms/new-deal-form";
-import { db } from "@/lib/firebase/init";
 import prismaDB from "@/lib/prisma";
 import { DealType } from "@prisma/client";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+
 import { revalidatePath } from "next/cache";
-import React from "react";
 
 /**
  * Adds a new deal to Firebase.

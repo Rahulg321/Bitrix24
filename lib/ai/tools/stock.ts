@@ -3,7 +3,7 @@ import { tool as createTool } from "ai";
 
 export const stockTool = createTool({
   description: "Get price for a stock",
-  parameters: z.object({
+  inputSchema: z.object({
     symbol: z.string().describe("The stock symbol to get the price for"),
   }),
   execute: async function ({ symbol }) {

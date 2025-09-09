@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export const weatherTool = createTool({
   description: "Display the weather for a location",
-  parameters: z.object({
+  inputSchema: z.object({
     location: z.string().describe("The location to get the weather for"),
   }),
   execute: async function ({ location }) {

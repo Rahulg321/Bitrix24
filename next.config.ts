@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 module.exports = {
+  serverExternalPackages: ["pdf-parse", "tiktoken"],
   images: {
     remotePatterns: [
       {
