@@ -1,5 +1,6 @@
 "use client";
 
+import { HiChevronUp } from "react-icons/hi";
 import clsx from "clsx";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -47,6 +48,7 @@ export const NavLinks: NavLinkType = [
   { navlink: "/raw-deals", navlabel: "Raw", icon: FiList },
   { navlink: "/published-deals", navlabel: "Published", icon: FiCheckSquare },
   { navlink: "/screeners", navlabel: "Screener", icon: FaScrewdriver },
+  { navlink: "/view-rollups", navlabel: "Rollups", icon: HiChevronUp },
 ];
 
 const Header = ({ className, session }: HeaderProps) => {

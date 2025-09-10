@@ -31,10 +31,9 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  if (isProtectedRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/auth/login", nextUrl));
-  }
-
+    if (isProtectedRoute && !isLoggedIn) {
+      return NextResponse.redirect(new URL("/auth/login", nextUrl));
+    }
   return NextResponse.next();
 });
 

@@ -25,6 +25,7 @@ model User {
   isBlocked     Boolean         @default(false)
   UserActionLog UserActionLog[]
   Deal          Deal[]
+  Rollups       Rollup[]        @relation("UserRollups")
 }
 
 model Account {
@@ -95,6 +96,9 @@ model Deal {
   POC          POC[]
   DealDocument DealDocument[]
   Employee     Employee[]
+
+  rollupId String? // optional
+  rollup   Rollup? @relation("RollupDeals", fields: [rollupId], references: [id])
 }
 
 model DealDocument {
@@ -220,4 +224,18 @@ model Employee {
 
   Deal   Deal?   @relation(fields: [dealId], references: [id])
   dealId String?
+}
+
+model Rollup {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  
+  deals Deal[] @relation("RollupDeals")
+
+ 
+  users User[] @relation("UserRollups")
 }
