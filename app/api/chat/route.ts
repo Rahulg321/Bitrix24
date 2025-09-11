@@ -1,9 +1,20 @@
-import { openai } from "@/lib/ai/available-models";
-import { weatherTool } from "@/lib/ai/tools/weather";
-import { stockTool } from "@/lib/ai/tools/stock";
-import { streamText } from "ai";
 import { NextResponse } from "next/server";
 
+type InMessage = { role: "user" | "assistant"; content: string };
+
 export async function POST(request: Request) {
-  return NextResponse.json({ message: "Hello, world!" });
+  try {
+    const body = await request.json().catch(() => ({}));
+    const messages: InMessage[] = Array.isArray(body?.messages)
+      ? body.messages
+      : [];
+    const lastUser = [...messages].reverse().find(m => m.role === "user");
+    const content = lastUser?.content?.trim() || "";
+    const reply = content
+      ? `You said: ${content}`
+      : "Hello! Ask me anything.";
+    return NextResponse.json({ message: reply });
+  } catch (e) {
+    return NextResponse.json({ message: "Server error." }, { status: 500 });
+  }
 }

@@ -28,15 +28,29 @@ To configure Google authentication, set the following environment variables in y
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------- |
 | `GOOGLE_CLIENT_ID`     | Your Google application's Client ID. Obtain this from the [Google Developer Console](https://console.developers.google.com/).     | Yes      | None          |
 | `GOOGLE_CLIENT_SECRET` | Your Google application's Client Secret. Obtain this from the [Google Developer Console](https://console.developers.google.com/). | Yes      | None          |
+| `GOOGLE_AI_API_KEY`       | Your Google Generative Language API key. Obtain this from the Google Cloud Console as described below.                            | Yes      | None          |
+
 
 **Instructions:**
 
-1. **Obtain Google OAuth Credentials:**
+1a. **Obtain Google OAuth Credentials:**
 
    - Navigate to the [Google Developer Console](https://console.developers.google.com/).
    - Create a new project or select an existing one.
    - Go to the "Credentials" section and create OAuth 2.0 credentials.
    - Note down the generated `Client ID` and `Client Secret`.
+
+1b. Obtain Google Generative Language API Key
+
+- Go to the [Google Cloud Console](https://console.cloud.google.com/).
+- Select your project or create a new one.
+- **Enable billing** on your project (required to use the API).
+- Enable the **Generative Language API**:
+  - Visit [Generative Language API library](https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com).
+  - Click **Enable**.
+- Go to the **Credentials** page.
+- Click **Create Credentials** → **API Key**.
+- Copy the generated API key.
 
 2. **Set Up Your `.env` File:**
    - Create a `.env` file in the root directory of your project if it doesn't exist.
@@ -47,6 +61,7 @@ To configure Google authentication, set the following environment variables in y
     ```env
     GOOGLE_CLIENT_ID=your-google-client-id
     GOOGLE_CLIENT_SECRET=your-google-client-secret
+    GOOGLE_AI_API_KEY=your-google-generative-language-api-key
     ```
   - Save the `.env` file. Ensure this file is **not** committed to version control by adding `.env` to your `.gitignore` file.
 
