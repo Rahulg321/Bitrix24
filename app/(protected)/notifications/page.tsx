@@ -4,6 +4,8 @@ import {
   getNotifications,
   markNotificationAsSeen,
 } from "@/app/actions/notifications";
+import useNotifications from "@/hooks/use-notifications";
+import { cn } from "@/lib/utils";
 import { Notification } from "@prisma/client";
 import { Circle, Dot, TrendingUp } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -24,106 +26,15 @@ type WebSocketMessage = {
 };
 
 export default function Notifications() {
-  const userSession = useSession();
+  const { notifications, wsConnected } = useNotifications();
+  const pendingDeals = notifications.filter(
+    (notif) => notif.status === "PENDING",
+  );
+  const completedDeals = notifications.filter(
+    (notif) => notif.status === "COMPLETED",
+  );
 
-  const userId = userSession.data ? userSession.data.user.id : undefined;
-
-  // extract this logic to some sort of hook eventually
-  const [completedDeals, setCompletedDeals] = useState<Notification[]>([]);
-  const [pendingDeals, setPendingDeals] = useState<Notification[]>([]);
-  const [wsConnected, setWsConnected] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const retryDelayRef = useRef(1000);
-
-  const fetchNotifications = useCallback(async () => {
-    if (!userId) return;
-    const notifications = await getNotifications(userId);
-    setPendingDeals(
-      notifications.filter((notif) => notif.status === "PENDING"),
-    );
-    setCompletedDeals(
-      notifications.filter((notif) => notif.status === "COMPLETED"),
-    );
-    // TODO: implement graceful error displaying
-  }, [userId]);
-
-  const fetchAndTransition = useCallback(() => {
-    startTransition(() => {
-      fetchNotifications();
-    });
-  }, [userId]);
-
-  useEffect(() => {
-    fetchAndTransition();
-  }, [fetchAndTransition]);
-
-  const formatEbitda = (ebitda: number) => {
-    if (ebitda >= 1000000) {
-      return `$${(ebitda / 1000000).toFixed(1)}M`;
-    } else if (ebitda >= 1000) {
-      return `$${(ebitda / 1000).toFixed(1)}K`;
-    }
-    return `$${ebitda.toLocaleString()}`;
-  };
-
-  const connectWebSocket = useCallback(() => {
-    const url = process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080";
-
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      setWsConnected(true);
-      ws.send(JSON.stringify({ type: "register", userId }));
-      retryDelayRef.current = 1000;
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-    };
-    ws.onmessage = (e) => {
-      try {
-        const msg: WebSocketMessage = JSON.parse(e.data);
-        if (msg.type === "new_screen_call") fetchAndTransition();
-        if (msg.type === "problem_done" && msg.productId) fetchAndTransition();
-      } catch {}
-    };
-    const scheduleReconnect = () => {
-      if (reconnectTimeoutRef.current) return;
-      const delay = Math.min(retryDelayRef.current, 10000);
-      reconnectTimeoutRef.current = setTimeout(() => {
-        reconnectTimeoutRef.current = null;
-        connectWebSocket();
-      }, delay);
-      retryDelayRef.current = Math.min(delay * 2, 10000);
-    };
-    ws.onclose = () => {
-      setWsConnected(false);
-      scheduleReconnect();
-    };
-    ws.onerror = () => {
-      setWsConnected(false);
-      scheduleReconnect();
-    };
-  }, [userId, fetchAndTransition]);
-
-  useEffect(() => {
-    if (!userId) return;
-    connectWebSocket();
-    return () => {
-      wsRef.current?.close();
-      wsRef.current = null;
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      retryDelayRef.current = 1000;
-    };
-  }, [userId, connectWebSocket]);
-
-  if (!userSession.data)
+  if (!wsConnected)
     return <div className="block-space big-container flex-1">Loading...</div>;
 
   return (
@@ -171,23 +82,18 @@ export default function Notifications() {
         <div className="flex flex-col items-end gap-y-4 text-left">
           {completedDeals.map((deal) => (
             <a
-              onMouseEnter={() => {
-                setCompletedDeals(
-                  [
-                    ...completedDeals.filter((_deal) => _deal.id !== deal.id),
-                    {
-                      ...deal,
-                      seen: true,
-                    },
-                  ].sort(
-                    (a, b) => b.createdAt.valueOf() - a.createdAt.valueOf(),
-                  ),
-                );
-                markNotificationAsSeen(deal.id);
+              onMouseEnter={async () => {
+                console.log(deal.seen);
+                await markNotificationAsSeen(deal.id);
               }}
               key={deal.id}
               href={`/raw-deals/${deal.dealId}`}
-              className="flex w-fit flex-row items-center gap-4 rounded-md border-2 p-2"
+              className={cn(
+                "flex w-fit flex-row items-center gap-4 rounded-md border-2 p-2",
+                {
+                  "bg-red-100 font-semibold": !deal.seen,
+                },
+              )}
             >
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
@@ -199,7 +105,6 @@ export default function Notifications() {
                   </p>
                 </div>
               </div>
-              {!deal.seen && <Circle size={12} fill="red" color="red" />}
             </a>
           ))}
         </div>
