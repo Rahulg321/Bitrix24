@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import NotificationPopover from "./NotificationPopover";
 import { FaScrewdriver } from "react-icons/fa";
+import { FaRobot } from "react-icons/fa";
 
 type HeaderProps = {
   className?: string;
@@ -42,11 +43,12 @@ type NavLinkType = {
   icon: any;
 }[];
 
-export const NavLinks: NavLinkType = [
+export const NavLinks: NavLinkType = [ 
   { navlink: "/new-deal", navlabel: "New", icon: FiPlus },
   { navlink: "/raw-deals", navlabel: "Raw", icon: FiList },
   { navlink: "/published-deals", navlabel: "Published", icon: FiCheckSquare },
   { navlink: "/screeners", navlabel: "Screener", icon: FaScrewdriver },
+  { navlink: "/chatbot", navlabel: "Chatbot", icon: FaRobot},
 ];
 
 const Header = ({ className, session }: HeaderProps) => {

@@ -73,6 +73,9 @@ const NotificationPopover = ({ userId }: { userId: string }) => {
     return `$${ebitda.toLocaleString()}`;
   };
 
+  // Create a ref to store the connect function to avoid dependency issues
+  const connectWebSocketRef = useRef<() => void>();
+
   const connectWebSocket = useCallback(() => {
     const url = process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8080";
 

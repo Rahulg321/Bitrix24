@@ -24,6 +24,7 @@
     "@auth/prisma-adapter": "^2.7.4",
     "@clerk/nextjs": "^6.5.1",
     "@google-cloud/pubsub": "^5.2.0",
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "^6.1.0",
     "@radix-ui/react-accordion": "^1.2.1",
