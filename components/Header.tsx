@@ -3,7 +3,13 @@
 import clsx from "clsx";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { MdMenu, MdClose } from "react-icons/md";
 import {
   FiPlus,
@@ -20,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronDown, Lock } from "lucide-react";
+import { BellIcon, ChevronDown, Lock } from "lucide-react";
 import { ModeToggle } from "./mode-toggle";
 import { Session } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
@@ -28,8 +34,10 @@ import { IconType } from "react-icons/lib";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import NotificationPopover from "./NotificationPopover";
 import { FaScrewdriver } from "react-icons/fa";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import useNotifications from "@/hooks/use-notifications";
 
 type HeaderProps = {
   className?: string;
@@ -93,8 +101,7 @@ const Header = ({ className, session }: HeaderProps) => {
           </div>
           <DesktopMenu pathname={pathname} dyanmicLinks={dynamicNavLinks} />
           <div className="flex items-center space-x-4">
-            <NotificationPopover userId={session?.user?.id as string} />
-
+            <NotificationLink />
             {session ? <ProfileMenu session={session} /> : <AuthDialogNavs />}
           </div>
         </ul>
@@ -110,6 +117,52 @@ const Header = ({ className, session }: HeaderProps) => {
 };
 
 export default Header;
+
+type PendingDeal = {
+  id: string;
+  title: string;
+  ebitda: number;
+  status: string;
+};
+
+type WebSocketMessage = {
+  type: string;
+  productId?: string;
+  status?: string;
+  userId?: string;
+};
+
+function NotificationLink() {
+  const { notifications, wsConnected } = useNotifications();
+  const newCount = notifications.filter(
+    (notif) =>
+      notif.status === "PENDING" ||
+      (notif.status === "COMPLETED" && notif.seen === false),
+  ).length;
+
+  return (
+    <a href="/notifications">
+      <button className="relative rounded-full p-2 transition-colors duration-200 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+        <BellIcon className="size-5 text-foreground" />
+        {newCount > 0 && (
+          <Badge
+            variant="destructive"
+            className="absolute -right-1 -top-1 flex size-6 items-center justify-center rounded-full p-0 text-xs font-medium"
+          >
+            {/* Do some sort of sum of pending + (completed where not seen) */}
+            {newCount > 99 ? "99+" : newCount}
+          </Badge>
+        )}
+        <div
+          className={cn(
+            "absolute -bottom-0 -right-0 size-2 rounded-full",
+            wsConnected ? "bg-green-500" : "bg-red-500",
+          )}
+        />
+      </button>
+    </a>
+  );
+}
 
 function NameLogo() {
   return (

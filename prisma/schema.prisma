@@ -221,3 +221,19 @@ model Employee {
   Deal   Deal?   @relation(fields: [dealId], references: [id])
   dealId String?
 }
+
+// Pending is being implemented by reading straight from redis queue as of now
+enum NotificationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Notification {
+  id        String @id @default(cuid())
+  userId    String
+  dealId    String
+  dealTitle String
+  status    NotificationStatus
+  createdAt DateTime @default(now())
+}
