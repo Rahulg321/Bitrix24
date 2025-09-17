@@ -235,7 +235,5 @@ model Notification {
   dealId    String
   dealTitle String
   status    NotificationStatus
-  seen      Boolean @default(false)
-  // eventually use this for TTL
   createdAt DateTime @default(now())
 }

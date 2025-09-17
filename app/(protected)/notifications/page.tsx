@@ -10,6 +10,8 @@ import { Notification } from "@prisma/client";
 import { Circle, Dot, TrendingUp } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState, useTransition, useRef, useCallback, useEffect } from "react";
+import { DataTable } from "./data-table";
+import { columns } from "./columns";
 
 type PendingDeal = {
   id: string;
@@ -33,6 +35,7 @@ export default function Notifications() {
   const completedDeals = notifications.filter(
     (notif) => notif.status === "COMPLETED",
   );
+
 
   if (!wsConnected)
     return <div className="block-space big-container flex-1">Loading...</div>;
@@ -79,7 +82,8 @@ export default function Notifications() {
       </div>
       <div className="flex-1 text-right">
         <h3 className="mb-2">Completed - {completedDeals.length}</h3>
-        <div className="flex flex-col items-end gap-y-4 text-left">
+        <DataTable columns={columns} data={completedDeals} />
+        {/* <div className="flex flex-col items-end gap-y-4 text-left">
           {completedDeals.map((deal) => (
             <a
               onMouseEnter={async () => {
@@ -107,7 +111,7 @@ export default function Notifications() {
               </div>
             </a>
           ))}
-        </div>
+        </div> */}
       </div>
     </div>
   );
