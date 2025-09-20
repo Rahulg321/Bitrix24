@@ -91,7 +91,8 @@ export const databaseQueryTool = tool({
           deals: [],
         };
       }
-
+      console.log(`✅ Found ${deals.length} deal(s).`);
+      console.log("Sample deal:", deals[0]);
       return {
         success: true,
         message: `Found ${deals.length} deal(s) matching your criteria.`,
@@ -126,19 +127,31 @@ export async function executeDatabaseQuery(input: unknown) {
 
     const result = await databaseQueryTool.execute!(validatedInput, {
         toolCallId: "manual-call",
-        messages: {
-            role: "user",
-            content: "Manual execution via API route"
-        }
+        messages: [
+            {
+                content: "Manual execution via API route",
+            } as ModelMessage, // Ensure this matches the ModelMessage type
+        ],
     });
 
-
-
-    if (!result.success) {
-      throw new Error(result.message);
+    // Handle both possible return types
+    let actualResult;
+    if (Symbol.asyncIterator in result) {
+      // If it's an AsyncIterable, get the first (and likely only) value
+      for await (const item of result) {
+        actualResult = item;
+        break;
+      }
+    } else {
+      // If it's a direct result object
+      actualResult = result;
     }
 
-    return result.deals;
+    if (!actualResult || !actualResult.success) {
+      throw new Error(actualResult?.message || "Query execution failed");
+    }
+
+    return actualResult.deals;
   } catch (error) {
     console.error("❌ executeDatabaseQuery failed:", error);
     throw error;

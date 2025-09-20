@@ -126,7 +126,10 @@ export async function POST(req: NextRequest) {
       }
 
       - Do NOT add any other text around the JSON.
+      - Do NOT generate debug statements like "print(...)".
       - Wait for human confirmation before proceeding to run the tool.
+      - When the user approves, execute the query and return the results in a clear format. Do not return debug statements like "print(...)".
+      - If the user rejects, respond with "Understood, I will not execute the query."
       `
     },
     ...previousMessages,
