@@ -11,6 +11,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Mic, MicOff, Plus, Paperclip, Image as ImageIcon, X, Sparkles, Send } from "lucide-react";
 import TextToSpeech from "@/components/TextToSpeech";
 import ReactMarkdown from "react-markdown";
+import RealDataResults from "@/components/RealDataResults";
 
 
 type ChatMessage = {
@@ -18,6 +19,7 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   createdAt: number;
+  toolResults?: any[];
 };
 
 type Conversation = {
@@ -195,22 +197,46 @@ export default function ChatbotPage() {
     // Start streaming
     setTypingMessageId(assistantId);
     let streamedContent = "";
-    const updatedConversation = await assistantReplyFromGoogle(trimmed, activeId, (chunk) => {
-      streamedContent += chunk;
-      setConversations(prev =>
-        prev.map(conv => {
-          if (conv.id === activeId) {
-            return {
-              ...conv,
-              messages: conv.messages.map(msg =>
-                msg.id === assistantId ? { ...msg, content: streamedContent } : msg
-              ),
-            };
-          }
-          return conv;
-        })
-      );
-    });
+    let toolResults: any[] = [];
+    
+    const updatedConversation = await assistantReplyFromGoogle(
+      trimmed, 
+      activeId, 
+      (chunk) => {
+        streamedContent += chunk;
+        setConversations(prev =>
+          prev.map(conv => {
+            if (conv.id === activeId) {
+              return {
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === assistantId ? { ...msg, content: streamedContent } : msg
+                ),
+              };
+            }
+            return conv;
+          })
+        );
+      },
+      (results) => {
+        console.log("Chatbot - Received tool results:", results);
+        toolResults = results;
+        // Update the message with tool results
+        setConversations(prev =>
+          prev.map(conv => {
+            if (conv.id === activeId) {
+              return {
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === assistantId ? { ...msg, toolResults } : msg
+                ),
+              };
+            }
+            return conv;
+          })
+        );
+      }
+    );
 
     if (updatedConversation) {
       const sortedMessages = [...(updatedConversation.messages || [])].sort(
@@ -219,11 +245,10 @@ export default function ChatbotPage() {
       const firstMessageContent = sortedMessages[0]?.content ?? "New Chat";
       const newTitle = firstMessageContent.slice(0, 30);
 
-      setConversations(prev => {
-        const others = prev.filter(c => c.id !== updatedConversation.id);
-        const updatedConv = { ...updatedConversation, messages: sortedMessages, title: newTitle };
-        return [updatedConv, ...others];
-      });
+      // Don't replace the optimistic message with toolResults - just update the title
+      setConversations(prev => prev.map(c => 
+        c.id === activeId ? { ...c, title: newTitle } : c
+      ));
 
       setActiveId(updatedConversation.id);
 
@@ -241,7 +266,8 @@ export default function ChatbotPage() {
   const assistantReplyFromGoogle = async (
     message: string,
     conversationId: string | null,
-    onStreamChunk?: (chunk: string) => void
+    onStreamChunk?: (chunk: string) => void,
+    onToolResults?: (toolResults: any[]) => void
   ): Promise<Conversation | null> => {
     try {
       const res = await fetch("/api/chat/ask-google", {
@@ -250,33 +276,36 @@ export default function ChatbotPage() {
         body: JSON.stringify({ message, conversationId }),
       });
 
-      if (!res.body) {
-        throw new Error("No response body for streaming");
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder("utf-8");
+      const responseData: { text: string; toolResults?: any[] } = await res.json();
+      console.log("Chatbot received response:", responseData);
 
-      let assistantMessage = "";
-      let newConversation: Conversation | null = null;
+      if (responseData.text) {
+        const text = responseData.text;
+        for (let i = 0; i < text.length; i += 10) {
+          const chunk = text.slice(i, i + 10);
+          onStreamChunk?.(chunk);
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        assistantMessage += chunk;
-
-        // Push streamed chunk to UI
-        onStreamChunk?.(chunk);
+      // Handle tool results for chart rendering
+      console.log("Frontend - responseData.toolResults:", responseData.toolResults);
+      if (responseData.toolResults && responseData.toolResults.length > 0) {
+        console.log("Frontend - Calling onToolResults with:", responseData.toolResults);
+        onToolResults?.(responseData.toolResults);
+      } else {
+        console.log("Frontend - No tool results found");
       }
 
       // Once stream is done, refetch full updated conversation
       const finalRes = await fetch("/api/chat/conversations");
       const finalData: { conversations: Conversation[] } = await finalRes.json();
 
-      newConversation = finalData.conversations.find(c => c.id === conversationId) ?? null;
-
+      const newConversation = finalData.conversations.find(c => c.id === conversationId) ?? null;
       return newConversation;
     } catch (err) {
       console.error("Streaming failed:", err);
@@ -467,7 +496,7 @@ export default function ChatbotPage() {
           <ScrollArea className="flex-1 p-4">
             <div className="mx-auto w-full max-w-3xl">
               {activeConversation?.messages.length ? (
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-6 pb-8">
                   {activeConversation.messages.map(msg => (
                     <div
                       key={msg.id}
@@ -490,6 +519,26 @@ export default function ChatbotPage() {
                               <ReactMarkdown>
                                 {typingMessageId === msg.id ? msg.content + "▍" : msg.content}
                               </ReactMarkdown>
+                              {/* Render charts when tool results are available */}
+                              {(() => {
+                                console.log("Chart render check:", { 
+                                  role: msg.role, 
+                                  hasToolResults: !!msg.toolResults, 
+                                  toolResultsLength: msg.toolResults?.length,
+                                  toolResults: msg.toolResults 
+                                });
+                                return msg.role === 'assistant' && msg.toolResults && msg.toolResults.length > 0;
+                              })() && (
+                                <div className="mt-4 border-t border-border/50 pt-4">
+                                  <div className="text-xs text-muted-foreground mb-2">
+                                    📊 Real data from database ({msg.toolResults.length} tool results)
+                                  </div>
+                                  <RealDataResults 
+                                    toolResults={msg.toolResults} 
+                                    query={msg.content} 
+                                  />
+                                </div>
+                              )}
                             </div>
                             <TextToSpeech text={msg.content} />
                           </div>

@@ -7,6 +7,7 @@ import { generateText } from "ai";
 import { getGoogleModel } from "@/lib/ai/available-models";
 import type { ChatMessage } from '@prisma/client';
 import type { ModelMessage } from "ai";
+import { z } from "zod";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,11 @@ export async function POST(req: NextRequest) {
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
 
-  const { ok, remaining, reset } = await rateLimit(`api:chat-post:${ip}`, 10, 60_000);
+  const rateKey = userSession?.user?.email
+  ? `chat:user:${userSession.user.email}`
+  : `chat:ip:${ip}`;
+
+  const { ok, remaining, reset } = await rateLimit(rateKey, 10, 60_000);
 
   if (!ok) {
     return new Response("Too many requests", {
@@ -40,10 +45,23 @@ export async function POST(req: NextRequest) {
     return new Response("User not found", { status: 404 });
   }
 
-  const { conversationId, message: userMessage } = await req.json();
+  const requestSchema = z.object({
+    conversationId: z.string().optional(),
+    message: z.string()
+      .min(1, "Message cannot be empty")
+      .max(2000, "Message too long (max 2000 characters)"),
+  });
+  let conversationId: string | undefined;
+  let userMessage: string;
 
-  if (!userMessage || userMessage.trim() === "") {
-    return new Response("Message is required", { status: 400 });
+  try {
+    const json = await req.json();
+    const parsed = requestSchema.parse(json);
+    conversationId = parsed.conversationId;
+    userMessage = parsed.message;
+  } catch (error) {
+    console.error("❌ Invalid request body:", error);
+    return new Response("Invalid input", { status: 400 });
   }
 
   // --- Fetch prior messages from DB
@@ -64,19 +82,24 @@ export async function POST(req: NextRequest) {
     }));
   }
 
-  const previousMessagesTyped: ModelMessage[] = previousMessages.map(msg => ({
-    role: msg.role,
-    content: msg.content,
-  }));
+  const previousMessagesTyped: ModelMessage[] = previousMessages
+    .filter(msg => msg.content && msg.content.trim().length > 0)
+    .map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    }));
 
   const promptMessages: ModelMessage[] = [
     {
       role: "system",
-      content: `You are a helpful assistant that can search for deal information in a database...`,
+      content: "You are a helpful assistant that can search for deal information in a database. When users ask about deals, use the databaseQueryTool to find relevant data. You can create charts and visualizations from the data you retrieve."
     },
     ...previousMessagesTyped,
     { role: "user", content: userMessage },
   ];
+
+  // Debug: Log the messages being sent
+  console.log("Messages being sent to AI:", JSON.stringify(promptMessages, null, 2));
 
   try {
     // Use generateText instead of generateObject for better tool handling
@@ -127,10 +150,14 @@ export async function POST(req: NextRequest) {
       }
     })();
 
-    // Return the AI response
-    return new Response(aiResponse, {
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
-    });
+    // Return JSON with text and tool results for chart rendering
+    return new Response(
+      JSON.stringify({ 
+        text: aiResponse, 
+        toolResults: toolResults ?? [] 
+      }),
+      { headers: { "Content-Type": "application/json" } }
+    );
 
   } catch (error) {
     console.error("❌ AI generation error:", error);
