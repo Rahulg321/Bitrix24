@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
   const rateKey = `chat:${userSession.user.email ?? `ip:${ip}`}`;
   const { ok, remaining, reset } = await rateLimit(rateKey, 10, 60_000);
+
   if (!ok) {
     return new Response("Too many requests", {
       status: 429,
@@ -135,6 +136,9 @@ export async function POST(req: NextRequest) {
     ...previousMessages,
     { role: "user", content: userMessage },
   ];
+
+  // Debug: Log the messages being sent
+  console.log("Messages being sent to AI:", JSON.stringify(promptMessages, null, 2));
 
   try {
     const result = await streamText({
