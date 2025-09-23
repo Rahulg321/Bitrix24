@@ -280,31 +280,26 @@ export default function ChatbotPage() {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
 
-      const responseData: { text: string; toolResults?: any[] } = await res.json();
-      console.log("Chatbot received response:", responseData);
-
-      if (responseData.text) {
-        const text = responseData.text;
-        for (let i = 0; i < text.length; i += 10) {
-          const chunk = text.slice(i, i + 10);
+      // Handle streaming response
+      const reader = res.body?.getReader();
+      let streamedText = "";
+      if (reader) {
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          streamedText += chunk;
           onStreamChunk?.(chunk);
-          await new Promise(resolve => setTimeout(resolve, 50));
         }
       }
 
-      // Handle tool results for chart rendering
-      console.log("Frontend - responseData.toolResults:", responseData.toolResults);
-      if (responseData.toolResults && responseData.toolResults.length > 0) {
-        console.log("Frontend - Calling onToolResults with:", responseData.toolResults);
-        onToolResults?.(responseData.toolResults);
-      } else {
-        console.log("Frontend - No tool results found");
-      }
+      // Optionally, parse toolResults if your backend sends them at the end (not supported in current backend)
+      // onToolResults?.(toolResults);
 
-      // Once stream is done, refetch full updated conversation
+      // Refetch updated conversation from DB
       const finalRes = await fetch("/api/chat/conversations");
       const finalData: { conversations: Conversation[] } = await finalRes.json();
-
       const newConversation = finalData.conversations.find(c => c.id === conversationId) ?? null;
       return newConversation;
     } catch (err) {
