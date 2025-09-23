@@ -13,7 +13,6 @@ import TextToSpeech from "@/components/TextToSpeech";
 import ReactMarkdown from "react-markdown";
 import RealDataResults from "@/components/RealDataResults";
 
-
 type ChatMessage = {
   id: string;
   role: "user" | "assistant";
@@ -26,11 +25,8 @@ type Conversation = {
   id: string;
   title: string;
   createdAt: number;
-  messages: ChatMessage[]; //array of chat messages
+  messages: ChatMessage[];
 };
-
-const STORAGE_KEY = "chatbot.conversations";
-const ACTIVE_KEY = "chatbot.activeId";
 
 function generateId(prefix: string = "id"): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}_${Date.now()}`;
@@ -44,6 +40,12 @@ export default function ChatbotPage() {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
+  
+  // Add pendingToolExecution state inside the component
+  const [pendingToolExecution, setPendingToolExecution] = useState<{
+    toolName: string;
+    input: Record<string, any>;
+  } | null>(null);
 
   // Attachments state
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -58,7 +60,6 @@ export default function ChatbotPage() {
   const animationFrameRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-
   const starterPrompts = [
     "Summarize this product: AI CRM for sales teams",
     "Give me 5 marketing ideas for a B2B fintech startup",
@@ -71,7 +72,6 @@ export default function ChatbotPage() {
     const loadConversations = async () => {
       try {
         const res = await fetch("/api/chat/conversations");
-        // Tell TypeScript what the expected shape of the data is
         const data: { conversations: Conversation[] } = await res.json();
 
         if (data?.conversations) {
@@ -79,9 +79,9 @@ export default function ChatbotPage() {
             ...conv,
             title:
               conv.title === "New Chat" &&
-              Array.isArray(conv.messages) &&
-              conv.messages.length > 0 &&
-              conv.messages[0]?.content
+                Array.isArray(conv.messages) &&
+                conv.messages.length > 0 &&
+                conv.messages[0]?.content
                 ? conv.messages[0].content.slice(0, 30)
                 : conv.title,
           }));
@@ -110,6 +110,59 @@ export default function ChatbotPage() {
       messages: sortedMessages,
     };
   }, [conversations, activeId]);
+
+  // Updated assistantReplyFromGoogle function with proper signature
+  const assistantReplyFromGoogle = async (
+    message: string,
+    conversationId: string | null,
+    onStreamChunk?: (chunk: string) => void,
+    onToolResults?: (toolResults: any[]) => void,
+    humanConfirmation?: {
+      toolName: string;
+      input: Record<string, any>;
+      confirmed: boolean;
+    }
+  ): Promise<Conversation | null> => {
+    try {
+      const requestBody: any = { message, conversationId };
+      if (humanConfirmation) {
+        requestBody.humanConfirmation = humanConfirmation;
+      }
+
+      const res = await fetch("/api/chat/ask-google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      // Handle streaming response
+      const reader = res.body?.getReader();
+      let streamedText = "";
+      if (reader) {
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          streamedText += chunk;
+          onStreamChunk?.(chunk);
+        }
+      }
+
+      // Refetch updated conversation from DB
+      const finalRes = await fetch("/api/chat/conversations");
+      const finalData: { conversations: Conversation[] } = await finalRes.json();
+      const newConversation = finalData.conversations.find(c => c.id === conversationId) ?? null;
+      return newConversation;
+    } catch (err) {
+      console.error("Streaming failed:", err);
+      return null;
+    }
+  };
 
   async function handleNewChat() {
     try {
@@ -163,7 +216,6 @@ export default function ChatbotPage() {
 
     const messageId = generateId("user");
     const assistantId = generateId("assistant");
-
     const now = Date.now();
 
     const userMessage: ChatMessage = {
@@ -179,6 +231,13 @@ export default function ChatbotPage() {
       content: "",
       createdAt: now + 1,
     };
+
+    // Check if this is a tool confirmation
+    const isConfirmation = pendingToolExecution &&
+      (trimmed.toLowerCase().includes('yes') || trimmed.toLowerCase().includes('run it') || trimmed.toLowerCase().includes('execute'));
+
+    const isRejection = pendingToolExecution &&
+      (trimmed.toLowerCase().includes('no') || trimmed.toLowerCase().includes('cancel') || trimmed.toLowerCase().includes('reject'));
 
     // Optimistically add user and empty assistant message
     setConversations(prev => {
@@ -198,45 +257,161 @@ export default function ChatbotPage() {
     setTypingMessageId(assistantId);
     let streamedContent = "";
     let toolResults: any[] = [];
-    
-    const updatedConversation = await assistantReplyFromGoogle(
-      trimmed, 
-      activeId, 
-      (chunk) => {
-        streamedContent += chunk;
-        setConversations(prev =>
-          prev.map(conv => {
-            if (conv.id === activeId) {
-              return {
-                ...conv,
-                messages: conv.messages.map(msg =>
-                  msg.id === assistantId ? { ...msg, content: streamedContent } : msg
-                ),
-              };
+
+    let updatedConversation;
+
+    if (isConfirmation && pendingToolExecution) {
+      // Send confirmation request
+      updatedConversation = await assistantReplyFromGoogle(
+        trimmed,
+        activeId,
+        (chunk) => {
+          streamedContent += chunk;
+          setConversations(prev =>
+            prev.map(conv => {
+              if (conv.id === activeId) {
+                return {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === assistantId ? { ...msg, content: streamedContent } : msg
+                  ),
+                };
+              }
+              return conv;
+            })
+          );
+        },
+        (results) => {
+          console.log("Chatbot - Received tool results:", results);
+          toolResults = results;
+          setConversations(prev =>
+            prev.map(conv => {
+              if (conv.id === activeId) {
+                return {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === assistantId ? { ...msg, toolResults } : msg
+                  ),
+                };
+              }
+              return conv;
+            })
+          );
+        },
+        // Pass the human confirmation (5th parameter)
+        {
+          toolName: pendingToolExecution.toolName,
+          input: pendingToolExecution.input,
+          confirmed: true
+        }
+      );
+      setPendingToolExecution(null);
+    } else if (isRejection && pendingToolExecution) {
+      // Send rejection
+      updatedConversation = await assistantReplyFromGoogle(
+        trimmed,
+        activeId,
+        (chunk) => {
+          streamedContent += chunk;
+          setConversations(prev =>
+            prev.map(conv => {
+              if (conv.id === activeId) {
+                return {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === assistantId ? { ...msg, content: streamedContent } : msg
+                  ),
+                };
+              }
+              return conv;
+            })
+          );
+        },
+        (results) => {
+          toolResults = results;
+          setConversations(prev =>
+            prev.map(conv => {
+              if (conv.id === activeId) {
+                return {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === assistantId ? { ...msg, toolResults } : msg
+                  ),
+                };
+              }
+              return conv;
+            })
+          );
+        },
+        // Pass the human confirmation (5th parameter)
+        {
+          toolName: pendingToolExecution.toolName,
+          input: pendingToolExecution.input,
+          confirmed: false
+        }
+      );
+      setPendingToolExecution(null);
+    } else {
+      // Regular message
+      updatedConversation = await assistantReplyFromGoogle(
+        trimmed,
+        activeId,
+        (chunk) => {
+          streamedContent += chunk;
+
+          // Check if the response contains a tool request
+          if (streamedContent.includes('"toolName"') && streamedContent.includes('"input"')) {
+            try {
+              // Try to parse the JSON tool request
+              const jsonMatch = streamedContent.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const toolRequest = JSON.parse(jsonMatch[0]);
+                if (toolRequest.toolName && toolRequest.input) {
+                  setPendingToolExecution({
+                    toolName: toolRequest.toolName,
+                    input: toolRequest.input
+                  });
+                }
+              }
+            } catch (e) {
+              // Ignore parsing errors - might be partial JSON
             }
-            return conv;
-          })
-        );
-      },
-      (results) => {
-        console.log("Chatbot - Received tool results:", results);
-        toolResults = results;
-        // Update the message with tool results
-        setConversations(prev =>
-          prev.map(conv => {
-            if (conv.id === activeId) {
-              return {
-                ...conv,
-                messages: conv.messages.map(msg =>
-                  msg.id === assistantId ? { ...msg, toolResults } : msg
-                ),
-              };
-            }
-            return conv;
-          })
-        );
-      }
-    );
+          }
+
+          setConversations(prev =>
+            prev.map(conv => {
+              if (conv.id === activeId) {
+                return {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === assistantId ? { ...msg, content: streamedContent } : msg
+                  ),
+                };
+              }
+              return conv;
+            })
+          );
+        },
+        (results) => {
+          console.log("Chatbot - Received tool results:", results);
+          toolResults = results;
+          setConversations(prev =>
+            prev.map(conv => {
+              if (conv.id === activeId) {
+                return {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === assistantId ? { ...msg, toolResults } : msg
+                  ),
+                };
+              }
+              return conv;
+            })
+          );
+        }
+        // No 5th parameter for regular messages
+      );
+    }
 
     if (updatedConversation) {
       const sortedMessages = [...(updatedConversation.messages || [])].sort(
@@ -245,8 +420,7 @@ export default function ChatbotPage() {
       const firstMessageContent = sortedMessages[0]?.content ?? "New Chat";
       const newTitle = firstMessageContent.slice(0, 30);
 
-      // Don't replace the optimistic message with toolResults - just update the title
-      setConversations(prev => prev.map(c => 
+      setConversations(prev => prev.map(c =>
         c.id === activeId ? { ...c, title: newTitle } : c
       ));
 
@@ -262,51 +436,6 @@ export default function ChatbotPage() {
     setTypingMessageId(null);
     setIsSending(false);
   }
-
-  const assistantReplyFromGoogle = async (
-    message: string,
-    conversationId: string | null,
-    onStreamChunk?: (chunk: string) => void,
-    onToolResults?: (toolResults: any[]) => void
-  ): Promise<Conversation | null> => {
-    try {
-      const res = await fetch("/api/chat/ask-google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, conversationId }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      // Handle streaming response
-      const reader = res.body?.getReader();
-      let streamedText = "";
-      if (reader) {
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          streamedText += chunk;
-          onStreamChunk?.(chunk);
-        }
-      }
-
-      // Optionally, parse toolResults if your backend sends them at the end (not supported in current backend)
-      // onToolResults?.(toolResults);
-
-      // Refetch updated conversation from DB
-      const finalRes = await fetch("/api/chat/conversations");
-      const finalData: { conversations: Conversation[] } = await finalRes.json();
-      const newConversation = finalData.conversations.find(c => c.id === conversationId) ?? null;
-      return newConversation;
-    } catch (err) {
-      console.error("Streaming failed:", err);
-      return null;
-    }
-  };
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -405,7 +534,7 @@ export default function ChatbotPage() {
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     animationFrameRef.current = null;
     if (audioContextRef.current) {
-      try { audioContextRef.current.close(); } catch {}
+      try { audioContextRef.current.close(); } catch { }
       audioContextRef.current = null;
     }
     if (mediaStreamRef.current) {
@@ -455,12 +584,11 @@ export default function ChatbotPage() {
     } else {
       try {
         recognitionRef.current?.stop();
-      } catch {}
+      } catch { }
       setIsRecording(false);
       stopAudioVisualization();
     }
   }
-
 
   return (
     <SidebarProvider>
@@ -515,22 +643,14 @@ export default function ChatbotPage() {
                                 {typingMessageId === msg.id ? msg.content + "▍" : msg.content}
                               </ReactMarkdown>
                               {/* Render charts when tool results are available */}
-                              {(() => {
-                                console.log("Chart render check:", { 
-                                  role: msg.role, 
-                                  hasToolResults: !!msg.toolResults, 
-                                  toolResultsLength: msg.toolResults?.length,
-                                  toolResults: msg.toolResults 
-                                });
-                                return msg.role === 'assistant' && msg.toolResults && msg.toolResults.length > 0;
-                              })() && (
+                              {msg.role === 'assistant' && msg.toolResults && msg.toolResults.length > 0 && (
                                 <div className="mt-4 border-t border-border/50 pt-4">
                                   <div className="text-xs text-muted-foreground mb-2">
                                     📊 Real data from database ({msg.toolResults.length} tool results)
                                   </div>
-                                  <RealDataResults 
-                                    toolResults={msg.toolResults} 
-                                    query={msg.content} 
+                                  <RealDataResults
+                                    toolResults={msg.toolResults}
+                                    query={msg.content}
                                   />
                                 </div>
                               )}
@@ -625,18 +745,18 @@ export default function ChatbotPage() {
                   </div>
                 ) : (
                   <Textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask me anything..."
-                  className="min-h-[56px] max-h-56 resize-none border-0 bg-transparent px-2 text-lg shadow-none focus:shadow-none focus-visible:ring-0 focus:ring-0 focus-visible:outline-none"
-                  rows={1}
-                />
+                    ref={inputRef}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask me anything..."
+                    className="min-h-[56px] max-h-56 resize-none border-0 bg-transparent px-2 text-lg shadow-none focus:shadow-none focus-visible:ring-0 focus:ring-0 focus-visible:outline-none"
+                    rows={1}
+                  />
                 )}
 
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => {}} aria-label="Autocomplete">
+                  <Button variant="ghost" size="icon" onClick={() => { }} aria-label="Autocomplete">
                     <Sparkles className="h-5 w-5" />
                   </Button>
                   <div className="flex items-center">
@@ -653,7 +773,6 @@ export default function ChatbotPage() {
                         <span className="pointer-events-none absolute -inset-1 rounded-full ring-2 ring-primary/40 animate-pulse" />
                       )}
                     </div>
-                    {/* no text chip while recording */}
                   </div>
                   <Button
                     onClick={sendMessage}

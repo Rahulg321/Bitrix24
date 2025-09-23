@@ -64,32 +64,87 @@ export async function POST(req: NextRequest) {
   // Handle human confirmation request separately:
   if (humanConfirmation) {
     if (humanConfirmation.toolName === "databaseQueryTool" && humanConfirmation.confirmed) {
-      // Human approved — execute the actual DB query and return results
-
       try {
         const queryResult = await executeDatabaseQuery(humanConfirmation.input);
 
-        if(Array.isArray(queryResult) && queryResult.length > 0){
-          console.log("One deal fetched:", queryResult[0]);
+        // Format the results as a readable message
+        let responseText = "";
+        if (Array.isArray(queryResult) && queryResult.length > 0) {
+          responseText = `Found ${queryResult.length} deal(s):\n\n`;
+          queryResult.forEach((deal, index) => {
+            responseText += `**Deal ${index + 1}: ${deal.title}**\n`;
+            responseText += `- EBITDA: ${deal.ebitda?.toLocaleString() || 'N/A'}\n`;
+            responseText += `- Revenue: ${deal.revenue?.toLocaleString() || 'N/A'}\n`;
+            responseText += `- Location: ${deal.companyLocation || 'N/A'}\n`;
+            responseText += `- EBITDA Margin: ${deal.ebitdaMargin ? parseFloat(deal.ebitdaMargin).toFixed(2) + '%' : 'N/A'}\n\n`;          });
         } else {
-          console.log("No deals found in query result.")
+          responseText = "No deals found matching your criteria.";
         }
 
-        return new Response(JSON.stringify(queryResult), {
-          headers: {
-            "Content-Type": "application/json",
+        // Create a streaming response like the main flow
+        const readableStream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(responseText));
+            controller.close();
+
+            // Save messages to DB
+            const now = new Date();
+            const userMsg = { role: "user", content: "yes, run it", createdAt: now };
+            const assistantMsg = { role: "assistant", content: responseText, createdAt: new Date(now.getTime() + 1) };
+
+            // Save asynchronously
+            if (conversationId) {
+              prisma.chatConversation.update({
+                where: { id: conversationId },
+                data: {
+                  messages: {
+                    create: [userMsg, assistantMsg],
+                  },
+                },
+              }).catch(err => console.error("Failed to save messages:", err));
+            }
           },
         });
+
+        return new Response(readableStream, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-cache",
+          },
+        });
+
       } catch (err) {
         console.error("Failed to execute DB query after human confirmation:", err);
-        return new Response("Failed to execute query", { status: 500 });
+
+        const errorStream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("Sorry, I encountered an error while executing the database query."));
+            controller.close();
+          },
+        });
+
+        return new Response(errorStream, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-cache",
+          },
+        });
       }
     } else {
-      // Human rejected or unknown tool
-      return new Response(
-        JSON.stringify({ success: false, message: "Tool execution cancelled by human." }),
-        { headers: { "Content-Type": "application/json" } }
-      );
+      // Human rejected
+      const rejectionStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("Understood, I will not execute the query."));
+          controller.close();
+        },
+      });
+
+      return new Response(rejectionStream, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache",
+        },
+      });
     }
   }
 
