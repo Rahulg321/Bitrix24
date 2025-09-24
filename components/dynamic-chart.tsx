@@ -86,13 +86,15 @@ export function DynamicChart({
                 value={toTitleCase(chartConfig.xKey)}
                 offset={0}
                 position="insideBottom"
+                style={{ fontWeight: 'bold' }}
               />
             </XAxis>
-            <YAxis>
+            <YAxis width={80} padding={{ left: 20, right: 20 }}>
               <Label
                 value={toTitleCase(chartConfig.yKeys[0])}
                 angle={-90}
                 position="insideLeft"
+                style={{ fontWeight: 'bold' }}
               />
             </YAxis>
             <ChartTooltip content={<ChartTooltipContent />} />
@@ -129,13 +131,15 @@ export function DynamicChart({
                 )}
                 offset={0}
                 position="insideBottom"
+                style={{ fontWeight: 'bold' }}
               />
             </XAxis>
-            <YAxis>
+            <YAxis width={80} padding={{ left: 20, right: 20 }}>
               <Label
                 value={toTitleCase(chartConfig.yKeys[0])}
                 angle={-90}
                 position="insideLeft"
+                style={{ fontWeight: 'bold' }}
               />
             </YAxis>
             <ChartTooltip content={<ChartTooltipContent />} />
@@ -163,8 +167,22 @@ export function DynamicChart({
         return (
           <AreaChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={chartConfig.xKey} />
-            <YAxis />
+            <XAxis dataKey={chartConfig.xKey}>
+              <Label
+                value={toTitleCase(chartConfig.xKey)}
+                offset={0}
+                position="insideBottom"
+                style={{ fontWeight: 'bold' }}
+              />
+            </XAxis>
+            <YAxis width={80} padding={{ left: 20, right: 20 }}>
+              <Label
+                value={toTitleCase(chartConfig.yKeys[0])}
+                angle={-90}
+                position="insideLeft"
+                style={{ fontWeight: 'bold' }}
+              />
+            </YAxis>
             <ChartTooltip content={<ChartTooltipContent />} />
             {chartConfig.legend && <Legend />}
             {chartConfig.yKeys.map((key, index) => (
@@ -220,7 +238,7 @@ export function DynamicChart({
             },
             {} as Record<string, { label: string; color: string }>,
           )}
-          className="h-[320px] w-full"
+          className="h-[320px] w-full px-4"
         >
           {renderChart()}
         </ChartContainer>
