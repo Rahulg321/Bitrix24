@@ -15,6 +15,25 @@ const databaseQueryInputSchema = z.object({
   minEbitdaMargin: z.number().optional().describe("Minimum EBITDA margin percentage"),
   maxEbitdaMargin: z.number().optional().describe("Maximum EBITDA margin percentage"),
   limit: z.number().optional().default(10).describe("Maximum number of results to return"),
+  // New filter formats
+  revenueFilter: z.object({
+    operator: z.enum(["greaterThan", "lessThan", "equals", "between", ">", "<", "="]),
+    value: z.number().optional(),
+    min: z.number().optional(),
+    max: z.number().optional(),
+  }).optional().describe("Revenue filter with operator and value"),
+  ebitdaFilter: z.object({
+    operator: z.enum(["greaterThan", "lessThan", "equals", "between", ">", "<", "="]),
+    value: z.number().optional(),
+    min: z.number().optional(),
+    max: z.number().optional(),
+  }).optional().describe("EBITDA filter with operator and value"),
+  ebitdaMarginFilter: z.object({
+    operator: z.enum(["greaterThan", "lessThan", "equals", "between", ">", "<", "="]),
+    value: z.number().optional(),
+    min: z.number().optional(),
+    max: z.number().optional(),
+  }).optional().describe("EBITDA margin filter with operator and value"),
 });
 
 export const databaseQueryTool = tool({
@@ -27,46 +46,96 @@ export const databaseQueryTool = tool({
     count: z.number(),
     deals: z.array(z.any()).optional(),
   }),
-  async execute({
-    id,
-    title,
-    minEbitda,
-    maxEbitda,
-    minRevenue,
-    maxRevenue,
-    exactRevenue,
-    companyLocation,
-    minEbitdaMargin,
-    maxEbitdaMargin,
-    limit = 10,
-  }) {
+  async execute(input: any) {
     try {
+      console.log("Database query tool - Received input:", JSON.stringify(input, null, 2));
+      
+      const {
+        id,
+        title,
+        minEbitda,
+        maxEbitda,
+        minRevenue,
+        maxRevenue,
+        exactRevenue,
+        companyLocation,
+        minEbitdaMargin,
+        maxEbitdaMargin,
+        limit = 10,
+        revenueFilter,
+        ebitdaFilter,
+        ebitdaMarginFilter
+      } = input;
+
       const where: any = {};
 
       if (id) where.id = id;
       if (title) where.title = { contains: title, mode: "insensitive" };
-      if (minEbitda !== undefined || maxEbitda !== undefined) {
-        where.ebitda = {};
-        if (minEbitda !== undefined) where.ebitda.gte = minEbitda;
-        if (maxEbitda !== undefined) where.ebitda.lte = maxEbitda;
-      }
-      if (exactRevenue !== undefined) {
+      
+      // Handle revenue filters (both old format and new filter format)
+      if (revenueFilter) {
+        where.revenue = {};
+        if (revenueFilter.operator === "greaterThan" || revenueFilter.operator === ">") {
+          where.revenue.gte = revenueFilter.value;
+        } else if (revenueFilter.operator === "lessThan" || revenueFilter.operator === "<") {
+          where.revenue.lte = revenueFilter.value;
+        } else if (revenueFilter.operator === "equals" || revenueFilter.operator === "=") {
+          where.revenue = revenueFilter.value;
+        } else if (revenueFilter.operator === "between") {
+          where.revenue.gte = revenueFilter.min;
+          where.revenue.lte = revenueFilter.max;
+        }
+      } else if (exactRevenue !== undefined) {
         where.revenue = exactRevenue;
       } else if (minRevenue !== undefined || maxRevenue !== undefined) {
         where.revenue = {};
         if (minRevenue !== undefined) where.revenue.gte = minRevenue;
         if (maxRevenue !== undefined) where.revenue.lte = maxRevenue;
       }
+
+      // Handle EBITDA filters
+      if (ebitdaFilter) {
+        where.ebitda = {};
+        if (ebitdaFilter.operator === "greaterThan" || ebitdaFilter.operator === ">") {
+          where.ebitda.gte = ebitdaFilter.value;
+        } else if (ebitdaFilter.operator === "lessThan" || ebitdaFilter.operator === "<") {
+          where.ebitda.lte = ebitdaFilter.value;
+        } else if (ebitdaFilter.operator === "equals" || ebitdaFilter.operator === "=") {
+          where.ebitda = ebitdaFilter.value;
+        } else if (ebitdaFilter.operator === "between") {
+          where.ebitda.gte = ebitdaFilter.min;
+          where.ebitda.lte = ebitdaFilter.max;
+        }
+      } else if (minEbitda !== undefined || maxEbitda !== undefined) {
+        where.ebitda = {};
+        if (minEbitda !== undefined) where.ebitda.gte = minEbitda;
+        if (maxEbitda !== undefined) where.ebitda.lte = maxEbitda;
+      }
+
       if (companyLocation) {
         where.companyLocation = { contains: companyLocation, mode: "insensitive" };
       }
-      if (minEbitdaMargin !== undefined || maxEbitdaMargin !== undefined) {
+
+      // Handle EBITDA margin filters
+      if (ebitdaMarginFilter) {
+        where.ebitdaMargin = {};
+        if (ebitdaMarginFilter.operator === "greaterThan" || ebitdaMarginFilter.operator === ">") {
+          where.ebitdaMargin.gte = ebitdaMarginFilter.value;
+        } else if (ebitdaMarginFilter.operator === "lessThan" || ebitdaMarginFilter.operator === "<") {
+          where.ebitdaMargin.lte = ebitdaMarginFilter.value;
+        } else if (ebitdaMarginFilter.operator === "equals" || ebitdaMarginFilter.operator === "=") {
+          where.ebitdaMargin = ebitdaMarginFilter.value;
+        } else if (ebitdaMarginFilter.operator === "between") {
+          where.ebitdaMargin.gte = ebitdaMarginFilter.min;
+          where.ebitdaMargin.lte = ebitdaMarginFilter.max;
+        }
+      } else if (minEbitdaMargin !== undefined || maxEbitdaMargin !== undefined) {
         where.ebitdaMargin = {};
         if (minEbitdaMargin !== undefined) where.ebitdaMargin.gte = minEbitdaMargin;
         if (maxEbitdaMargin !== undefined) where.ebitdaMargin.lte = maxEbitdaMargin;
       }
 
-      console.log("Querying deals with where:", where);
+      console.log("Database query tool - Querying deals with where:", JSON.stringify(where, null, 2));
 
       const deals = await prisma.deal.findMany({
         where,
@@ -105,7 +174,12 @@ export const databaseQueryTool = tool({
         })),
       };
     } catch (error) {
-      console.error("❌ Query failed:", error);
+      console.error("❌ Database query failed:", error);
+      console.error("❌ Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        input: input
+      });
       return {
         success: false,
         message: "Error while executing query.",
@@ -119,7 +193,6 @@ export const databaseQueryTool = tool({
 
 export async function executeDatabaseQuery(input: unknown) {
   try {
-    // ✅ Use the raw schema (fully typed)
     const validatedInput = databaseQueryInputSchema.parse(input);
     if (typeof databaseQueryTool.execute !== 'function') {
         throw new Error("databaseQueryTool.execute is not defined");

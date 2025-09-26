@@ -27,14 +27,14 @@ export const chartConfig = {
   title: "Revenue vs EBITDA by Company"
 }
 
-Available chart types: "bar", "line", "pie", "scatter"
+Available chart types: "bar", "line", "pie"
 Available fields: company, revenue, ebitda, ebitdaMargin, location, id
 
-Choose the chart type and configuration that best answers the user's question.`;
+Choose the chart type and configuration that best answers the user's query.`;
 
   try {
     const { object: config } = await generateObject({
-      model: getGoogleModel("gemini-1.5-flash"),
+      model: getGoogleModel("gemini-1.5-flash") as any,
       system,
       prompt: `Given the following deal data from a database query result, generate the chart config that best visualizes the data and answers the user's query.
 
@@ -42,7 +42,7 @@ User Query: ${userQuery}
 
 Data: ${JSON.stringify(results, null, 2)}`,
       schema: z.object({
-        type: z.enum(["bar", "line", "pie", "scatter"]),
+        type: z.enum(["bar", "line", "pie"]),
         xKey: z.string(),
         yKeys: z.array(z.string()),
         title: z.string(),

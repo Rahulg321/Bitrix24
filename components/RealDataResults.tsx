@@ -1,6 +1,6 @@
 "use client";
 
-import { Results } from "@/components/results";
+import { DynamicChart } from "@/components/dynamic-chart";
 import { Config, Result } from "@/lib/types";
 import { generateChartConfig } from "@/lib/ai/chart-generator";
 import { useState, useEffect } from "react";
@@ -180,9 +180,8 @@ export default function RealDataResults({ toolResults, query }: RealDataResultsP
         <div className="mb-2 text-sm text-muted-foreground">
           📊 Real data from your database
         </div>
-        <Results 
-          results={chartData.results} 
-          columns={chartData.columns} 
+        <DynamicChart 
+          chartData={chartData.results} 
           chartConfig={chartData.chartConfig}
         />
       </div>

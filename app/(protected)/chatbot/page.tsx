@@ -139,17 +139,67 @@ export default function ChatbotPage() {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
 
-      // Handle streaming response
-      const reader = res.body?.getReader();
-      let streamedText = "";
-      if (reader) {
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          streamedText += chunk;
-          onStreamChunk?.(chunk);
+      // Check if this is a JSON response (for tool confirmations) or streaming
+      const contentType = res.headers.get("content-type");
+      
+      if (contentType?.includes("application/json")) {
+        // Handle JSON response (tool confirmation with results)
+        const responseData: { text: string; toolResults?: any[] } = await res.json();
+
+        if (responseData.text) {
+          const text = responseData.text;
+          for (let i = 0; i < text.length; i += 10) {
+            const chunk = text.slice(i, i + 10);
+            onStreamChunk?.(chunk);
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+        }
+
+        // Handle tool results
+        if (responseData.toolResults && responseData.toolResults.length > 0) {
+          onToolResults?.(responseData.toolResults);
+        }
+      } else {
+        // Handle streaming response (regular messages)
+        const reader = res.body?.getReader();
+        let streamedText = "";
+        let markerBuffer = "";
+        if (reader) {
+          const decoder = new TextDecoder();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const rawChunk = decoder.decode(value, { stream: true });
+
+            // Accumulate for robust marker parsing across chunk boundaries
+            markerBuffer += rawChunk;
+
+            // Process any complete [HITL_REQUEST] markers
+            let hitlRegex = /\[HITL_REQUEST\]\s*(\{[\s\S]*?\})(?:\n|$)/g;
+            let hitlMatch;
+            while ((hitlMatch = hitlRegex.exec(markerBuffer)) !== null) {
+              try {
+                const payload = JSON.parse(hitlMatch[1]);
+                if (payload.toolName && payload.input) {
+                  setPendingToolExecution({
+                    toolName: payload.toolName,
+                    input: payload.input
+                  });
+                }
+              } catch {}
+            }
+            // Remove processed [HITL_REQUEST] segments from buffer
+            markerBuffer = markerBuffer.replace(/\[HITL_REQUEST\]\s*(\{[\s\S]*?\})(?:\n|$)/g, "");
+
+
+
+            // The remaining buffer is user-visible assistant text
+            if (markerBuffer) {
+              streamedText += markerBuffer;
+              onStreamChunk?.(markerBuffer);
+              markerBuffer = "";
+            }
+          }
         }
       }
 
@@ -282,16 +332,18 @@ export default function ChatbotPage() {
           );
         },
         (results) => {
-          console.log("Chatbot - Received tool results:", results);
           toolResults = results;
           setConversations(prev =>
             prev.map(conv => {
               if (conv.id === activeId) {
                 return {
                   ...conv,
-                  messages: conv.messages.map(msg =>
-                    msg.id === assistantId ? { ...msg, toolResults } : msg
-                  ),
+                  messages: conv.messages.map(msg => {
+                    if (msg.id === assistantId) {
+                      return { ...msg, toolResults };
+                    }
+                    return msg;
+                  }),
                 };
               }
               return conv;
@@ -393,7 +445,6 @@ export default function ChatbotPage() {
           );
         },
         (results) => {
-          console.log("Chatbot - Received tool results:", results);
           toolResults = results;
           setConversations(prev =>
             prev.map(conv => {
@@ -707,6 +758,50 @@ export default function ChatbotPage() {
 
           <div className="sticky bottom-6 border-t-0 bg-transparent px-3 pb-4">
             <div className="mx-auto w-full max-w-3xl space-y-2">
+              {/* HITL Confirmation UI */}
+              {pendingToolExecution && (
+                <div className="mx-auto w-full max-w-3xl rounded-lg border bg-yellow-50 p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="text-yellow-600">⚠️</div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-yellow-800">
+                        Database Query Request
+                      </div>
+                      <div className="text-xs text-yellow-700 mt-1">
+                        The AI wants to search the database with these criteria:
+                      </div>
+                      <div className="text-xs text-yellow-600 mt-2 font-mono bg-yellow-100 p-2 rounded">
+                        {JSON.stringify(pendingToolExecution.input, null, 2)}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setInput("yes, run it");
+                          sendMessage();
+                        }}
+                        className="text-green-600 border-green-300 hover:bg-green-50"
+                      >
+                        Confirm
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setInput("no, cancel");
+                          sendMessage();
+                        }}
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {attachments.map((file, i) => (

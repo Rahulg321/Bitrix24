@@ -2,9 +2,8 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { rateLimit } from "@/lib/redis";
-import { tools, executeDatabaseQuery } from "@/lib/ai/tools/chatbot-tools";
-import { streamText } from "ai";
-import { getGoogleModel } from "@/lib/ai/available-models";
+import { executeDatabaseQuery } from "@/lib/ai/tools/chatbot-tools";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ChatMessage } from '@prisma/client';
 import type { ModelMessage } from "ai";
 import { z } from "zod";
@@ -55,7 +54,6 @@ export async function POST(req: NextRequest) {
     conversationId = parsed.conversationId;
     userMessage = parsed.message;
     humanConfirmation = parsed.humanConfirmation;
-    console.log(humanConfirmation)
   } catch (err) {
     console.error("Invalid request body:", err);
     return new Response("Invalid input", { status: 400 });
@@ -72,43 +70,42 @@ export async function POST(req: NextRequest) {
         if (Array.isArray(queryResult) && queryResult.length > 0) {
           responseText = `Found ${queryResult.length} deal(s):\n\n`;
           queryResult.forEach((deal, index) => {
-            responseText += `**Deal ${index + 1}: ${deal.title}**\n`;
+            responseText += `Deal ${index + 1}: ${deal.title}\n`;
             responseText += `- EBITDA: ${deal.ebitda?.toLocaleString() || 'N/A'}\n`;
             responseText += `- Revenue: ${deal.revenue?.toLocaleString() || 'N/A'}\n`;
             responseText += `- Location: ${deal.companyLocation || 'N/A'}\n`;
-            responseText += `- EBITDA Margin: ${deal.ebitdaMargin ? parseFloat(deal.ebitdaMargin).toFixed(2) + '%' : 'N/A'}\n\n`;          });
+            responseText += `- EBITDA Margin: ${deal.ebitdaMargin ? parseFloat(deal.ebitdaMargin).toFixed(2) + '%' : 'N/A'}\n\n`;
+          });
         } else {
           responseText = "No deals found matching your criteria.";
         }
 
-        // Create a streaming response like the main flow
-        const readableStream = new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode(responseText));
-            controller.close();
+        // Return JSON response with toolResults for chart rendering
+        const responseData = {
+          text: responseText,
+          toolResults: [{ result: { deals: queryResult } }]
+        };
 
-            // Save messages to DB
-            const now = new Date();
-            const userMsg = { role: "user", content: "yes, run it", createdAt: now };
-            const assistantMsg = { role: "assistant", content: responseText, createdAt: new Date(now.getTime() + 1) };
+        // Save messages to DB
+        const now = new Date();
+        const userMsg = { role: "user", content: "yes, run it", createdAt: now };
+        const assistantMsg = { role: "assistant", content: responseText, createdAt: new Date(now.getTime() + 1) };
 
-            // Save asynchronously
-            if (conversationId) {
-              prisma.chatConversation.update({
-                where: { id: conversationId },
-                data: {
-                  messages: {
-                    create: [userMsg, assistantMsg],
-                  },
-                },
-              }).catch(err => console.error("Failed to save messages:", err));
-            }
-          },
-        });
+        // Save asynchronously
+        if (conversationId) {
+          prisma.chatConversation.update({
+            where: { id: conversationId },
+            data: {
+              messages: {
+                create: [userMsg, assistantMsg],
+              },
+            },
+          }).catch(err => console.error("Failed to save messages:", err));
+        }
 
-        return new Response(readableStream, {
+        return new Response(JSON.stringify(responseData), {
           headers: {
-            "Content-Type": "text/plain; charset=utf-8",
+            "Content-Type": "application/json",
             "Cache-Control": "no-cache",
           },
         });
@@ -192,32 +189,36 @@ export async function POST(req: NextRequest) {
     { role: "user", content: userMessage },
   ];
 
-  // Debug: Log the messages being sent
-  console.log("Messages being sent to AI:", JSON.stringify(promptMessages, null, 2));
 
   try {
-    const result = await streamText({
-      model: getGoogleModel("gemini-1.5-flash"),
-      tools,
-      messages: promptMessages,
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
+    const systemMsg = promptMessages.find((m) => m.role === "system")?.content || "";
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: systemMsg,
     });
 
-    const stream = result.textStream;
-    if (!stream || typeof stream[Symbol.asyncIterator] !== 'function') {
-      console.error("Result is not async iterable");
-      return new Response("Internal Server Error", { status: 500 });
-    }
+    const promptText = promptMessages
+      .filter(m => m.role !== "system")
+      .map(m => `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`)
+      .join("\n\n");
+
+    const response = await model.generateContentStream(promptText);
 
     let assistantMessageContent = "";
 
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of stream) {
-            assistantMessageContent += chunk;
-            controller.enqueue(new TextEncoder().encode(chunk));
+          for await (const chunk of response.stream) {
+            const textChunk = chunk.text();
+            if (textChunk) {
+              assistantMessageContent += textChunk;
+              controller.enqueue(new TextEncoder().encode(textChunk));
+            }
+            
           }
-          console.log("Assistant response:", assistantMessageContent);
           controller.close();
 
           // Save user + assistant messages to DB asynchronously
