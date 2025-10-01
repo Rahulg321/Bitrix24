@@ -11,11 +11,11 @@ const databaseQueryInputSchema = z.object({
   minRevenue: z.number().optional().describe("Minimum revenue amount"),
   maxRevenue: z.number().optional().describe("Maximum revenue amount"),
   exactRevenue: z.number().optional().describe("Exact revenue amount"),
-  companyLocation: z.string().optional().describe("Company location"),
+  location: z.string().optional().describe("Company location"),
+  industry: z.string().optional().describe("Company industry"),
   minEbitdaMargin: z.number().optional().describe("Minimum EBITDA margin percentage"),
   maxEbitdaMargin: z.number().optional().describe("Maximum EBITDA margin percentage"),
   limit: z.number().optional().default(10).describe("Maximum number of results to return"),
-  // New filter formats
   revenueFilter: z.object({
     operator: z.enum(["greaterThan", "lessThan", "equals", "between", ">", "<", "="]),
     value: z.number().optional(),
@@ -48,8 +48,6 @@ export const databaseQueryTool = tool({
   }),
   async execute(input: any) {
     try {
-      console.log("Database query tool - Received input:", JSON.stringify(input, null, 2));
-      
       const {
         id,
         title,
@@ -58,7 +56,8 @@ export const databaseQueryTool = tool({
         minRevenue,
         maxRevenue,
         exactRevenue,
-        companyLocation,
+        location,
+        industry,
         minEbitdaMargin,
         maxEbitdaMargin,
         limit = 10,
@@ -72,7 +71,6 @@ export const databaseQueryTool = tool({
       if (id) where.id = id;
       if (title) where.title = { contains: title, mode: "insensitive" };
       
-      // Handle revenue filters (both old format and new filter format)
       if (revenueFilter) {
         where.revenue = {};
         if (revenueFilter.operator === "greaterThan" || revenueFilter.operator === ">") {
@@ -93,7 +91,6 @@ export const databaseQueryTool = tool({
         if (maxRevenue !== undefined) where.revenue.lte = maxRevenue;
       }
 
-      // Handle EBITDA filters
       if (ebitdaFilter) {
         where.ebitda = {};
         if (ebitdaFilter.operator === "greaterThan" || ebitdaFilter.operator === ">") {
@@ -112,11 +109,20 @@ export const databaseQueryTool = tool({
         if (maxEbitda !== undefined) where.ebitda.lte = maxEbitda;
       }
 
-      if (companyLocation) {
-        where.companyLocation = { contains: companyLocation, mode: "insensitive" };
+      if (location) {
+        where.companyLocation = { 
+          contains: location, 
+          mode: "insensitive" 
+        };
       }
 
-      // Handle EBITDA margin filters
+      if (industry) {
+        where.industry = { 
+          contains: industry, 
+          mode: "insensitive" 
+        };
+      }
+
       if (ebitdaMarginFilter) {
         where.ebitdaMargin = {};
         if (ebitdaMarginFilter.operator === "greaterThan" || ebitdaMarginFilter.operator === ">") {
@@ -135,8 +141,6 @@ export const databaseQueryTool = tool({
         if (maxEbitdaMargin !== undefined) where.ebitdaMargin.lte = maxEbitdaMargin;
       }
 
-      console.log("Database query tool - Querying deals with where:", JSON.stringify(where, null, 2));
-
       const deals = await prisma.deal.findMany({
         where,
         select: {
@@ -146,6 +150,7 @@ export const databaseQueryTool = tool({
           revenue: true,
           companyLocation: true,
           ebitdaMargin: true,
+          industry: true,
           createdAt: true,
         },
         orderBy: { ebitda: "desc" },
@@ -160,8 +165,6 @@ export const databaseQueryTool = tool({
           deals: [],
         };
       }
-      console.log(`✅ Found ${deals.length} deal(s).`);
-      console.log("Sample deal:", deals[0]);
       return {
         success: true,
         message: `Found ${deals.length} deal(s) matching your criteria.`,
@@ -174,12 +177,7 @@ export const databaseQueryTool = tool({
         })),
       };
     } catch (error) {
-      console.error("❌ Database query failed:", error);
-      console.error("❌ Error details:", {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        input: input
-      });
+      console.error("Database query failed:", error);
       return {
         success: false,
         message: "Error while executing query.",
@@ -203,30 +201,17 @@ export async function executeDatabaseQuery(input: unknown) {
         messages: [
             {
                 content: "Manual execution via API route",
-            } as ModelMessage, // Ensure this matches the ModelMessage type
+            } as ModelMessage,
         ],
     });
 
-    // Handle both possible return types
-    let actualResult;
-    if (Symbol.asyncIterator in result) {
-      // If it's an AsyncIterable, get the first (and likely only) value
-      for await (const item of result) {
-        actualResult = item;
-        break;
-      }
-    } else {
-      // If it's a direct result object
-      actualResult = result;
+    if (!result || !result.success) {
+      throw new Error(result?.message || "Query execution failed");
     }
 
-    if (!actualResult || !actualResult.success) {
-      throw new Error(actualResult?.message || "Query execution failed");
-    }
-
-    return actualResult.deals;
+    return result.deals;
   } catch (error) {
-    console.error("❌ executeDatabaseQuery failed:", error);
+    console.error("executeDatabaseQuery failed:", error);
     throw error;
   }
 }

@@ -28,7 +28,7 @@ export const chartConfig = {
 }
 
 Available chart types: "bar", "line", "pie"
-Available fields: company, revenue, ebitda, ebitdaMargin, location, id
+Available fields: company, revenue, ebitda, ebitdaMargin, location, industry, id
 
 Choose the chart type and configuration that best answers the user's query.`;
 

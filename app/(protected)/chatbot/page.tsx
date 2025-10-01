@@ -143,20 +143,10 @@ export default function ChatbotPage() {
       const contentType = res.headers.get("content-type");
       
       if (contentType?.includes("application/json")) {
-        // Handle JSON response (tool confirmation with results)
-        const responseData: { text: string; toolResults?: any[] } = await res.json();
-
-        if (responseData.text) {
-          const text = responseData.text;
-          for (let i = 0; i < text.length; i += 10) {
-            const chunk = text.slice(i, i + 10);
-            onStreamChunk?.(chunk);
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
-        }
-
-        // Handle tool results
-        if (responseData.toolResults && responseData.toolResults.length > 0) {
+        // Tool confirmation path: do NOT stream assistant text.
+        // Only surface tool results so the UI immediately shows table + chart.
+        const responseData: { text?: string; toolResults?: any[] } = await res.json();
+        if (Array.isArray(responseData.toolResults) && responseData.toolResults.length > 0) {
           onToolResults?.(responseData.toolResults);
         }
       } else {
@@ -289,7 +279,7 @@ export default function ChatbotPage() {
     const isRejection = pendingToolExecution &&
       (trimmed.toLowerCase().includes('no') || trimmed.toLowerCase().includes('cancel') || trimmed.toLowerCase().includes('reject'));
 
-    // Optimistically add user and empty assistant message
+    
     setConversations(prev => {
       const updated = prev.map(conv => {
         if (conv.id === activeId) {
@@ -312,25 +302,15 @@ export default function ChatbotPage() {
 
     if (isConfirmation && pendingToolExecution) {
       // Send confirmation request
+      console.log("Sending HITL confirmation with:", {
+        toolName: pendingToolExecution.toolName,
+        input: pendingToolExecution.input,
+        confirmed: true
+      });
       updatedConversation = await assistantReplyFromGoogle(
         trimmed,
         activeId,
-        (chunk) => {
-          streamedContent += chunk;
-          setConversations(prev =>
-            prev.map(conv => {
-              if (conv.id === activeId) {
-                return {
-                  ...conv,
-                  messages: conv.messages.map(msg =>
-                    msg.id === assistantId ? { ...msg, content: streamedContent } : msg
-                  ),
-                };
-              }
-              return conv;
-            })
-          );
-        },
+        undefined, // do not stream text on confirmation
         (results) => {
           toolResults = results;
           setConversations(prev =>
@@ -363,22 +343,7 @@ export default function ChatbotPage() {
       updatedConversation = await assistantReplyFromGoogle(
         trimmed,
         activeId,
-        (chunk) => {
-          streamedContent += chunk;
-          setConversations(prev =>
-            prev.map(conv => {
-              if (conv.id === activeId) {
-                return {
-                  ...conv,
-                  messages: conv.messages.map(msg =>
-                    msg.id === assistantId ? { ...msg, content: streamedContent } : msg
-                  ),
-                };
-              }
-              return conv;
-            })
-          );
-        },
+        undefined, // do not stream text on rejection
         (results) => {
           toolResults = results;
           setConversations(prev =>
@@ -426,7 +391,7 @@ export default function ChatbotPage() {
                 }
               }
             } catch (e) {
-              // Ignore parsing errors - might be partial JSON
+              
             }
           }
 
@@ -668,7 +633,7 @@ export default function ChatbotPage() {
           </div>
 
           <ScrollArea className="flex-1 p-4">
-            <div className="mx-auto w-full max-w-3xl">
+            <div className="mx-auto w-full max-w-6xl">
               {activeConversation?.messages.length ? (
                 <div className="flex flex-col gap-6 pb-8">
                   {activeConversation.messages.map(msg => (
@@ -687,18 +652,23 @@ export default function ChatbotPage() {
                           <div className="flex items-start gap-2">
                             <div
                               className={cn(
-                                "prose prose-sm max-w-[80%] rounded-2xl border bg-accent px-4 py-3 text-sm leading-relaxed shadow-sm dark:prose-invert",
+                                msg.toolResults && msg.toolResults.length > 0
+                                  ? "prose prose-sm max-w-none w-full rounded-2xl border bg-accent px-4 py-3 text-sm leading-relaxed shadow-sm dark:prose-invert"
+                                  : "prose prose-sm max-w-[80%] rounded-2xl border bg-accent px-4 py-3 text-sm leading-relaxed shadow-sm dark:prose-invert",
                               )}
                             >
-                              <ReactMarkdown>
-                                {typingMessageId === msg.id ? msg.content + "▍" : msg.content}
-                              </ReactMarkdown>
+                              {msg.toolResults && msg.toolResults.length > 0 ? (
+                                <div className="text-sm text-foreground font-medium">
+                                  Results
+                                </div>
+                              ) : (
+                                <ReactMarkdown>
+                                  {typingMessageId === msg.id ? msg.content + "▍" : msg.content}
+                                </ReactMarkdown>
+                              )}
                               {/* Render charts when tool results are available */}
                               {msg.role === 'assistant' && msg.toolResults && msg.toolResults.length > 0 && (
                                 <div className="mt-4 border-t border-border/50 pt-4">
-                                  <div className="text-xs text-muted-foreground mb-2">
-                                    📊 Real data from database ({msg.toolResults.length} tool results)
-                                  </div>
                                   <RealDataResults
                                     toolResults={msg.toolResults}
                                     query={msg.content}

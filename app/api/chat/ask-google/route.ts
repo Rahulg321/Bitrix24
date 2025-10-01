@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 🧠 Fetch prior conversation messages
+  // Fetch prior conversation messages
   let previousMessages: ModelMessage[] = [];
   if (conversationId) {
     const convo = await prisma.chatConversation.findUnique({

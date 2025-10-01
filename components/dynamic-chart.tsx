@@ -74,7 +74,7 @@ export function DynamicChart({
     };
 
     chartData = processChartData(chartData, chartConfig.type);
-    // console.log({ chartData, chartConfig });
+   
 
     switch (chartConfig.type) {
       case "bar":
@@ -117,8 +117,7 @@ export function DynamicChart({
           chartConfig.multipleLines &&
           chartConfig.measurementColumn &&
           chartConfig.yKeys.includes(chartConfig.measurementColumn);
-        // console.log(useTransformedData, "useTransformedData");
-        // const useTransformedData = false;
+       
         return (
           <LineChart data={useTransformedData ? data : chartData}>
             <CartesianGrid strokeDasharray="3 3" />

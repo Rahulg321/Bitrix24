@@ -4,6 +4,7 @@ import { DynamicChart } from "@/components/dynamic-chart";
 import { Config, Result } from "@/lib/types";
 import { generateChartConfig } from "@/lib/ai/chart-generator";
 import { useState, useEffect } from "react";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface RealDataResultsProps {
   toolResults?: any[];
@@ -21,49 +22,14 @@ export default function RealDataResults({ toolResults, query }: RealDataResultsP
 
   useEffect(() => {
     const processData = async () => {
-      console.log("RealDataResults - Processing tool results:", toolResults);
-      
+    
       if (!toolResults || toolResults.length === 0) {
         setError("No tool results provided");
         setLoading(false);
         return;
       }
 
-      // Try to find deals data in various possible structures
-      let deals = null;
-      
-      // Method 1: Look for direct deals array
-      for (const result of toolResults) {
-        console.log("Checking result:", result);
-        
-        // Check for the actual structure from the API response
-        if (result.output?.deals && Array.isArray(result.output.deals)) {
-          deals = result.output.deals;
-          break;
-        }
-        
-        if (result.result?.deals && Array.isArray(result.result.deals)) {
-          deals = result.result.deals;
-          break;
-        }
-        
-        if (result.result?.data && Array.isArray(result.result.data)) {
-          deals = result.result.data;
-          break;
-        }
-        
-        if (result.result?.results && Array.isArray(result.result.results)) {
-          deals = result.result.results;
-          break;
-        }
-        
-        if (Array.isArray(result.result)) {
-          deals = result.result;
-          break;
-        }
-      }
-
-      console.log("RealDataResults - Found deals:", deals);
+      const deals = toolResults[0]?.result?.deals;
 
       if (!deals || !Array.isArray(deals) || deals.length === 0) {
         setError("No deals found matching your criteria.");
@@ -96,20 +62,20 @@ export default function RealDataResults({ toolResults, query }: RealDataResultsP
             ebitda: parseCurrency(deal.ebitda),
             revenue: parseCurrency(deal.revenue),
             ebitdaMargin: parsePercentage(deal.ebitdaMargin),
-            location: deal.companyLocation || 'Unknown',
+            location: deal.companyLocation,
+            industry: deal.industry || deal.sector,
             id: deal.id
           };
         });
 
-        console.log("RealDataResults - Transformed results:", results);
-
+       
         // Use AI to generate the best chart configuration
         const { config } = await generateChartConfig(results, query);
         
-        // Determine columns based on the chart config
+        
         const columns = [config.xKey, ...config.yKeys];
         
-        console.log("RealDataResults - Generated config:", config);
+       
         
         setChartData({
           results,
@@ -119,7 +85,8 @@ export default function RealDataResults({ toolResults, query }: RealDataResultsP
         
       } catch (err) {
         console.error("Error generating chart config:", err);
-        setError(`Failed to generate chart configuration: ${err.message}`);
+        const message = typeof err === "object" && err && "message" in err ? (err as any).message : String(err);
+        setError(`Failed to generate chart configuration: ${message}`);
       }
       
       setLoading(false);
@@ -149,7 +116,7 @@ export default function RealDataResults({ toolResults, query }: RealDataResultsP
       <div className="w-full">
         <div className="rounded-lg border bg-background/50 p-4 shadow-sm">
           <div className="mb-2 text-sm text-muted-foreground">
-            📊 Real data from your database
+               Real data from your database
           </div>
           <div className="text-sm text-muted-foreground">
             Error: Error generatating chart
@@ -164,7 +131,7 @@ export default function RealDataResults({ toolResults, query }: RealDataResultsP
       <div className="w-full">
         <div className="rounded-lg border bg-background/50 p-4 shadow-sm">
           <div className="mb-2 text-sm text-muted-foreground">
-            📊 Real data from your database
+             Real data from your database
           </div>
           <div className="text-sm text-muted-foreground">
             No chart data available
@@ -174,16 +141,71 @@ export default function RealDataResults({ toolResults, query }: RealDataResultsP
     );
   }
 
+  // Build a readable label map for table headers
+  const labelMap: Record<string, string> = {
+    company: "Company",
+    revenue: "Revenue",
+    ebitda: "EBITDA",
+    ebitdaMargin: "EBITDA Margin",
+    location: "Location",
+    industry: "Industry",
+    id: "ID",
+  };
+
+  
+  const orderedColumns = chartData.columns;
+
+  // Format helpers
+  const formatCurrency = (val: unknown) =>
+    new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Number(val ?? 0));
+
+  const formatValue = (col: string, val: unknown) => {
+    if (col === "revenue" || col === "ebitda") return formatCurrency(val);
+    if (col === "ebitdaMargin") return `${Number(val ?? 0)}%`;
+    return String(val ?? "");
+  };
+
   return (
     <div className="w-full">
       <div className="rounded-lg border bg-background/50 p-4 shadow-sm">
-        <div className="mb-2 text-sm text-muted-foreground">
-          📊 Real data from your database
+        {/* Compact heading instead of verbose text list */}
+        <div className="mb-3 text-sm font-medium text-foreground">Results</div>
+
+        {/* Full-width table  */}
+        <Table>
+          <TableCaption className="sr-only">Query results</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  {orderedColumns.map((col) => (
+                    <TableHead
+                      key={`head-${col}`}
+                      className={col === "revenue" || col === "ebitda" ? "text-right" : undefined}
+                    >
+                      {labelMap[col] ?? col}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+          <TableBody>
+            {chartData.results.map((r, rowIdx) => (
+              <TableRow key={`row-${r.id ?? rowIdx}`}>
+                {orderedColumns.map((col) => (
+                  <TableCell
+                    key={`cell-${r.id ?? rowIdx}-${col}`}
+                    className={col === "revenue" || col === "ebitda" ? "text-right" : undefined}
+                  >
+                    {formatValue(col, (r as any)[col])}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+       
+        <div className="mt-4">
+          <DynamicChart chartData={chartData.results} chartConfig={chartData.chartConfig} />
         </div>
-        <DynamicChart 
-          chartData={chartData.results} 
-          chartConfig={chartData.chartConfig}
-        />
       </div>
     </div>
   );
