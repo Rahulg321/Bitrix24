@@ -16,6 +16,7 @@ import { FilesIcon, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFileIcon, formatFileSize } from "@/lib/utils";
 import { FileIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface UploadFile {
   id: string;
@@ -43,7 +44,7 @@ export function BulkFileUploadDialog({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const { toast } = useToast();
   const createFilePreview = (file: File): Promise<string | undefined> => {
     return new Promise((resolve) => {
       if (file.type.startsWith("image/")) {
@@ -127,14 +128,37 @@ export function BulkFileUploadDialog({
       try {
         console.log(files);
 
-        // Reset after successful upload
-        //   setTimeout(() => {
-        //     setFiles([]);
-        //     setIsOpen(false);
-        //   }, 1000);
+        const formData = new FormData();
+        files.forEach((file) => {
+          formData.append("files", file.file);
+        });
+
+        const response = await fetch("/api/bulk-upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("Upload failed");
+        }
+
+        const data = await response.json();
+        console.log(data);
+        toast({
+          title: "Files uploaded successfully",
+          description: "The files have been uploaded to the server.",
+        });
+
+        setFiles([]);
+        setIsOpen(false);
       } catch (error) {
         console.error("Upload failed:", error);
         setFiles((prev) => prev.map((f) => ({ ...f, status: "error" })));
+        toast({
+          title: "Upload failed",
+          description: "The files could not be uploaded. Please try again.",
+          variant: "destructive",
+        });
       }
     });
   };

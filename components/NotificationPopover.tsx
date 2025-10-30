@@ -148,7 +148,7 @@ const NotificationPopover = ({ userId }: { userId: string }) => {
                                 </p>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <Link href={`/raw-deals/${job.dealId}`}>
+                                {/* <Link href={`/raw-deals/${job.dealId}`}>
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -156,7 +156,7 @@ const NotificationPopover = ({ userId }: { userId: string }) => {
                                   >
                                     <Eye className="h-3 w-3" />
                                   </Button>
-                                </Link>
+                                </Link> */}
                                 <div className="text-xs text-muted-foreground">
                                   {new Date(job.createdAt).toLocaleTimeString()}
                                 </div>

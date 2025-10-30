@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-parse", "tiktoken"],
@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
+    turbopackFileSystemCacheForDev: true,
+
     serverActions: {
       bodySizeLimit: "10mb",
     },
